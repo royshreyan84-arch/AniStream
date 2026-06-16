@@ -1,7 +1,13 @@
 "use client"
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { Comment } from '@/app/lib/types'
+import { RecentComment } from '@/app/lib/types'
+import { Navbar } from '../lib/Navbar'
+const PINK = '#ff2475'
+const PURPLE = '#6c63ff'
+const BG = '#0d0f1a'
+const CARD = '#13152b'
+const BORDER = '#1e2140'
 
 export default function Home() {
   const router = useRouter()
@@ -25,10 +31,11 @@ export default function Home() {
   const [top10Tab, setTop10Tab] = useState('Today')
   const [isMobile, setIsMobile] = useState(false)
   const trendingRef = useRef<HTMLDivElement | null>(null)
-  const latestRef = useRef<HTMLDivElement | null>(null)
-  const [recentComments, setRecentComments] = useState<Comment[]>([
+  const [lang, setLang] = useState<'en' | 'ja'>('en')
+  const [recentComments, setRecentComments] = useState<RecentComment[]>([
     { id: 1, user: 'animeFan', content: 'Loved the latest episode', time: '2023-10-01 12:00:00', animeId: 1, animeTitle: 'Some Anime' }
   ])
+
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768)
     check()
@@ -50,31 +57,23 @@ export default function Home() {
     router.push('/login')
   }
 
- useEffect(() => {
-  const fetchWithDelay = async () => {
-    try {
-      const res1 = await fetch('https://api.jikan.moe/v4/top/anime?limit=20')
-      const data1 = await res1.json()
-      setAnimeList(data1.data ?? [])
-      setFeatured(data1.data?.[0] ?? null)
+  useEffect(() => {
+    fetch('https://api.jikan.moe/v4/top/anime?limit=20')
+      .then(r => r.json())
+      .then(data => { setAnimeList(data.data ?? []); setFeatured(data.data?.[0] ?? null) })
+      .catch(() => { setAnimeList([]); setFeatured(null) })
 
-      await new Promise(r => setTimeout(r, 400))
-      const res2 = await fetch('https://api.jikan.moe/v4/top/anime?limit=10&page=1')
-      const data2 = await res2.json()
-      setTrendingList(data2.data ?? [])
+    fetch('https://api.jikan.moe/v4/top/anime?limit=10')
+      .then(r => r.json())
+      .then(data => setTrendingList(data.data ?? []))
+      .catch(() => setTrendingList([]))
 
-      await new Promise(r => setTimeout(r, 400))
-      const res3 = await fetch('https://api.jikan.moe/v4/seasons/now?limit=24')
-      const data3 = await res3.json()
-      setLatestEpisodes(data3.data ?? [])
-    } catch (err) {
-      console.error('Failed to fetch home data:', err)
-    }
-  }
-  fetchWithDelay()
-}, [])
+    fetch('https://api.jikan.moe/v4/seasons/now?limit=12')
+      .then(r => r.json())
+      .then(data => setLatestEpisodes(data.data ?? []))
+      .catch(() => setLatestEpisodes([]))
+  }, [])
 
-  // Auto-rotate spotlight every 5s
   useEffect(() => {
     if (animeList.length === 0) return
     const id = setInterval(() => {
@@ -119,24 +118,15 @@ export default function Home() {
     ])
   }, [])
 
-  const scroll = (ref: React.RefObject<HTMLDivElement | null>, dir: 'left' | 'right') => {
-    ref.current?.scrollBy({ left: dir === 'left' ? -300 : 300, behavior: 'smooth' })
-  }
-
   const SearchDropdown = () => (
-    <div onClick={e => e.stopPropagation()} style={{
-      position: 'absolute', top: '100%', left: 0, right: 0,
-      backgroundColor: '#13152b', border: '1px solid #6c63ff',
-      borderRadius: '10px', zIndex: 99999, marginTop: '4px', maxHeight: '350px', overflowY: 'auto'
-    }}>
+    <div onClick={e => e.stopPropagation()} style={{ position: 'absolute', top: '100%', left: 0, right: 0, backgroundColor: CARD, border: `1px solid ${PURPLE}`, borderRadius: '10px', zIndex: 99999, marginTop: '4px', maxHeight: '350px', overflowY: 'auto' }}>
       <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '6px 10px' }}>
-        <button onClick={() => { setShowDropdown(false); setSearchResults([]) }}
-          style={{ background: 'none', border: 'none', color: '#aaa', cursor: 'pointer', fontSize: '16px' }}>✕</button>
+        <button onClick={() => { setShowDropdown(false); setSearchResults([]) }} style={{ background: 'none', border: 'none', color: '#aaa', cursor: 'pointer', fontSize: '16px' }}>✕</button>
       </div>
       {searchResults.map((anime: any, i: number) => (
         <div key={`${anime.mal_id}-${i}`} onClick={() => router.push(`/watch/${anime.mal_id}`)}
-          style={{ display: 'flex', gap: '12px', padding: '10px 16px', cursor: 'pointer', borderBottom: '1px solid #0d0f1a', alignItems: 'center' }}
-          onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#0d0f1a')}
+          style={{ display: 'flex', gap: '12px', padding: '10px 16px', cursor: 'pointer', borderBottom: `1px solid ${BG}`, alignItems: 'center' }}
+          onMouseEnter={e => (e.currentTarget.style.backgroundColor = BG)}
           onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
         >
           <img src={anime.images.jpg.image_url} alt={anime.title} style={{ width: '40px', height: '55px', objectFit: 'cover', borderRadius: '4px' }} />
@@ -146,47 +136,37 @@ export default function Home() {
           </div>
         </div>
       ))}
-      <div style={{ padding: '10px 16px', textAlign: 'center', position: 'sticky', bottom: 0, backgroundColor: '#13152b', borderTop: '1px solid #6c63ff' }}>
-        <span onClick={() => window.location.href = `/search?q=${encodeURIComponent(search)}`}
-          style={{ color: '#6c63ff', cursor: 'pointer', fontSize: '13px', fontWeight: 'bold' }}>View all results →</span>
+      <div style={{ padding: '10px 16px', textAlign: 'center', position: 'sticky', bottom: 0, backgroundColor: CARD, borderTop: `1px solid ${PURPLE}` }}>
+        <span onClick={() => window.location.href = `/search?q=${encodeURIComponent(search)}`} style={{ color: PURPLE, cursor: 'pointer', fontSize: '13px', fontWeight: 'bold' }}>View all results →</span>
       </div>
     </div>
   )
 
-  const SectionHeader = ({ title, onLeftClick, onRightClick, href }: { title: string; onLeftClick?: () => void; onRightClick?: () => void; href?: string }) => (
+  // HiAnime-style pink section title with left border
+  const SectionTitle = ({ title, href }: { title: string; href?: string }) => (
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-      <h3 style={{ fontSize: isMobile ? '15px' : '18px', margin: 0, fontWeight: 700, color: '#e0e0ff' }}>{title}</h3>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-        {href && <a href={href} style={{ color: '#6c63ff', fontSize: '12px', textDecoration: 'none' }}>View More</a>}
-        {onLeftClick && (
-          <>
-            <button onClick={onLeftClick} style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: '#1a1a2e', border: '1px solid #333', color: 'white', cursor: 'pointer', fontSize: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>‹</button>
-            <button onClick={onRightClick} style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: '#1a1a2e', border: '1px solid #333', color: 'white', cursor: 'pointer', fontSize: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>›</button>
-          </>
-        )}
-      </div>
+      <h3 style={{ fontSize: isMobile ? '16px' : '19px', margin: 0, fontWeight: 700, color: PINK, borderLeft: `3px solid ${PINK}`, paddingLeft: '10px' }}>{title}</h3>
+      {href && <a href={href} style={{ color: '#aaa', fontSize: '12px', textDecoration: 'none' }}>View More ›</a>}
     </div>
   )
 
-  const AnimeCard = ({ anime, index, showRank = false }: { anime: any; index?: number; showRank?: boolean }) => (
+  const TrendingCard = ({ anime, index }: { anime: any; index: number }) => (
     <div onClick={() => router.push(`/watch/${anime.mal_id}`)}
-      style={{ minWidth: isMobile ? '110px' : '145px', cursor: 'pointer', flexShrink: 0, position: 'relative' }}
-    >
+      style={{ minWidth: isMobile ? '105px' : '140px', cursor: 'pointer', flexShrink: 0 }}>
       <div style={{ borderRadius: '8px', overflow: 'hidden', position: 'relative' }}>
         <img src={anime.images?.jpg?.image_url} alt={anime.title}
-          style={{ width: '100%', height: isMobile ? '155px' : '200px', objectFit: 'cover', display: 'block' }} />
-        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'linear-gradient(transparent, rgba(0,0,0,0.92))', padding: '30px 8px 8px' }}>
-          <p style={{ margin: 0, fontSize: '11px', fontWeight: 'bold', lineHeight: 1.3 }}>
-            {anime.title?.slice(0, 20)}{(anime.title?.length ?? 0) > 20 ? '...' : ''}
+          style={{ width: '100%', height: isMobile ? '148px' : '195px', objectFit: 'cover', display: 'block' }} />
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(transparent 50%, rgba(0,0,0,0.95))' }} />
+        <div style={{ position: 'absolute', bottom: '6px', left: '8px', right: '8px' }}>
+          <p style={{ margin: 0, fontSize: '10px', fontWeight: 'bold', lineHeight: 1.3, color: 'white' }}>
+            {anime.title?.slice(0, 18)}{(anime.title?.length ?? 0) > 18 ? '...' : ''}
           </p>
         </div>
-        {showRank && index !== undefined && (
-          <div style={{ position: 'absolute', top: '6px', left: '6px', backgroundColor: '#6c63ff', borderRadius: '4px', padding: '2px 7px', fontSize: '11px', fontWeight: 'bold' }}>
-            #{index + 1}
-          </div>
-        )}
+        <div style={{ position: 'absolute', top: '6px', left: '6px', backgroundColor: PINK, borderRadius: '4px', padding: '1px 6px', fontSize: '10px', fontWeight: 'bold' }}>
+          {String(index + 1).padStart(2, '0')}
+        </div>
         {anime.score && (
-          <div style={{ position: 'absolute', top: '6px', right: '6px', backgroundColor: 'rgba(0,0,0,0.75)', borderRadius: '4px', padding: '2px 5px', fontSize: '10px', color: '#ffd700' }}>
+          <div style={{ position: 'absolute', top: '6px', right: '6px', backgroundColor: 'rgba(0,0,0,0.75)', borderRadius: '4px', padding: '1px 5px', fontSize: '9px', color: '#ffd700' }}>
             ⭐{anime.score}
           </div>
         )}
@@ -194,44 +174,74 @@ export default function Home() {
     </div>
   )
 
-  const GridCard = ({ anime }: { anime: any }) => (
+  // HiAnime-style card: big poster, title + type below
+  const PosterCard = ({ anime }: { anime: any }) => (
     <div onClick={() => router.push(`/watch/${anime.mal_id}`)}
-      style={{ cursor: 'pointer', borderRadius: '8px', overflow: 'hidden', backgroundColor: '#13152b' }}
-      onMouseEnter={e => (e.currentTarget.style.transform = 'scale(1.03)')}
-      onMouseLeave={e => (e.currentTarget.style.transform = 'scale(1)')}
+      style={{ cursor: 'pointer', borderRadius: '8px', overflow: 'hidden', backgroundColor: CARD }}
+      onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-3px)'; (e.currentTarget as HTMLDivElement).style.boxShadow = `0 8px 20px rgba(0,0,0,0.4)` }}
+      onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.transform = 'none'; (e.currentTarget as HTMLDivElement).style.boxShadow = 'none' }}
     >
       <div style={{ position: 'relative' }}>
         <img src={anime.images?.jpg?.image_url} alt={anime.title}
-          style={{ width: '100%', aspectRatio: '3/4', objectFit: 'cover', display: 'block' }} />
-        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, display: 'flex', justifyContent: 'space-between', padding: '4px 6px', background: 'linear-gradient(transparent, rgba(0,0,0,0.85))' }}>
-          <span style={{ backgroundColor: '#6c63ff', borderRadius: '3px', padding: '1px 5px', fontSize: '9px', fontWeight: 'bold' }}>{anime.type || 'TV'}</span>
-          {anime.episodes && <span style={{ color: '#ddd', fontSize: '9px' }}>{anime.episodes} ep</span>}
+          style={{ width: '100%', aspectRatio: '2/3', objectFit: 'cover', display: 'block' }} />
+        <div style={{ position: 'absolute', bottom: '6px', left: '6px', display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+          <span style={{ backgroundColor: '#1cd37a', borderRadius: '3px', padding: '1px 5px', fontSize: '9px', fontWeight: 'bold', color: '#000' }}>
+            CC {anime.episodes ?? '?'}
+          </span>
+          {anime.score && (
+            <span style={{ backgroundColor: 'rgba(0,0,0,0.75)', borderRadius: '3px', padding: '1px 5px', fontSize: '9px', color: '#ffd700' }}>
+              ⭐{anime.score}
+            </span>
+          )}
         </div>
       </div>
-      <div style={{ padding: '7px 8px' }}>
-        <p style={{ margin: 0, fontSize: '11px', fontWeight: 'bold', lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{anime.title}</p>
-        <p style={{ margin: '3px 0 0', fontSize: '10px', color: '#8b8fa8' }}>{anime.type} • {anime.year ?? '?'}</p>
+      <div style={{ padding: '8px 8px 10px' }}>
+        <p style={{ margin: '0 0 3px', fontSize: '12px', fontWeight: 'bold', lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{anime.title}</p>
+        <p style={{ margin: 0, fontSize: '10px', color: '#8b8fa8' }}>{anime.type || 'TV'} • {anime.duration?.replace(' per ep', '') ?? '24 min'}</p>
       </div>
     </div>
   )
 
+  const Top10List = () => (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+      {animeList.slice(0, 10).map((anime: any, i: number) => (
+        <div key={anime.mal_id} onClick={() => router.push(`/watch/${anime.mal_id}`)}
+          style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 10px', backgroundColor: CARD, borderRadius: '8px', cursor: 'pointer', border: '1px solid transparent', transition: 'all 0.2s' }}
+          onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.borderColor = PINK }}
+          onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.borderColor = 'transparent' }}
+        >
+          <span style={{ fontSize: '18px', fontWeight: 900, color: i < 3 ? PINK : '#444', minWidth: '28px', textAlign: 'center', fontStyle: 'italic' }}>
+            {String(i + 1).padStart(2, '0')}
+          </span>
+          <img src={anime.images.jpg.image_url} alt={anime.title} style={{ width: '44px', height: '58px', objectFit: 'cover', borderRadius: '5px', flexShrink: 0 }} />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{ margin: '0 0 4px', fontSize: '12px', fontWeight: 'bold', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{anime.title}</p>
+            <div style={{ display: 'flex', gap: '5px', alignItems: 'center' }}>
+              <span style={{ backgroundColor: '#1cd37a', borderRadius: '3px', padding: '1px 5px', fontSize: '9px', fontWeight: 'bold', color: '#000' }}>SUB {anime.episodes ?? '?'}</span>
+              <span style={{ color: '#ffd700', fontSize: '10px' }}>⭐ {anime.score ?? 'N/A'}</span>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  )
   return (
-    <main style={{ backgroundColor: '#0d0f1a', minHeight: '100vh', color: 'white', fontFamily: 'sans-serif' }}>
+    <main style={{ backgroundColor: BG, minHeight: '100vh', color: 'white', fontFamily: 'sans-serif' }}>
 
-      {/* ── NAVBAR ── */}
-      <nav style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 20px', backgroundColor: '#0a0b14', borderBottom: '2px solid #6c63ff', position: 'sticky', top: 0, zIndex: 9999 }}>
+      {/* NAVBAR */}
+      <Navbar lang={lang} onLangChange={setLang}/> 
+       <nav style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 20px', backgroundColor: '#0a0b14', borderBottom: `2px solid ${PURPLE}`, position: 'sticky', top: 0, zIndex: 9999 }}>
         <button onClick={toggleMenu} style={{ background: 'none', border: 'none', color: 'white', fontSize: '22px', cursor: 'pointer', flexShrink: 0 }}>☰</button>
-        <a href="/home" style={{ color: '#6c63ff', fontSize: '20px', fontWeight: 'bold', textDecoration: 'none', whiteSpace: 'nowrap', flexShrink: 0 }}>⚔️ AniStream</a>
+        <a href="/home" style={{ color: PURPLE, fontSize: '20px', fontWeight: 'bold', textDecoration: 'none', whiteSpace: 'nowrap', flexShrink: 0 }}>⚔️ AniStream</a>
 
-        {/* Desktop search */}
         {!isMobile && (
           <div onClick={e => e.stopPropagation()} style={{ flex: 1, maxWidth: '380px', position: 'relative', display: 'flex' }}>
             <input type="text" placeholder="Search anime..." value={search}
               onChange={e => handleSearchChange(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleSearch()}
-              style={{ width: '100%', padding: '8px 16px', borderRadius: '20px 0 0 20px', border: '1px solid #6c63ff', backgroundColor: '#1a1a2e', color: 'white', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
+              style={{ width: '100%', padding: '8px 16px', borderRadius: '20px 0 0 20px', border: `1px solid ${PURPLE}`, backgroundColor: '#1a1a2e', color: 'white', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
             />
-            <button onClick={handleSearch} style={{ padding: '8px 16px', backgroundColor: '#6c63ff', border: 'none', borderRadius: '0 20px 20px 0', color: 'white', cursor: 'pointer', fontWeight: 'bold', fontSize: '13px' }}>
+            <button onClick={handleSearch} style={{ padding: '8px 16px', backgroundColor: PURPLE, border: 'none', borderRadius: '0 20px 20px 0', color: 'white', cursor: 'pointer', fontWeight: 'bold', fontSize: '13px' }}>
               {searching ? '...' : 'Search'}
             </button>
             {showDropdown && searchResults.length > 0 && <SearchDropdown />}
@@ -239,20 +249,17 @@ export default function Home() {
         )}
 
         <div style={{ flex: 1 }} />
-
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          {isMobile && (
-            <button onClick={toggleSearch} style={{ background: 'none', border: 'none', color: 'white', fontSize: '20px', cursor: 'pointer' }}>🔍</button>
-          )}
+          {isMobile && <button onClick={toggleSearch} style={{ background: 'none', border: 'none', color: 'white', fontSize: '20px', cursor: 'pointer' }}>🔍</button>}
           {isLoggedIn ? (
             <>
               <div style={{ position: 'relative' }}>
                 <button onClick={toggleBell} style={{ background: 'none', border: 'none', color: 'white', fontSize: '20px', cursor: 'pointer' }}>🔔</button>
                 {bellOpen && (
-                  <div style={{ position: 'absolute', top: '44px', right: 0, backgroundColor: '#13152b', border: '1px solid #6c63ff', borderRadius: '10px', width: '290px', zIndex: 10001, overflow: 'hidden' }}>
+                  <div style={{ position: 'absolute', top: '44px', right: 0, backgroundColor: CARD, border: `1px solid ${PURPLE}`, borderRadius: '10px', width: '290px', zIndex: 10001, overflow: 'hidden' }}>
                     <div style={{ display: 'flex', borderBottom: '1px solid #333' }}>
                       {['Anime', 'Community'].map(tab => (
-                        <button key={tab} onClick={() => setBellTab(tab)} style={{ flex: 1, padding: '11px', border: 'none', backgroundColor: bellTab === tab ? '#0d0f1a' : 'transparent', color: bellTab === tab ? '#6c63ff' : '#aaa', fontSize: '13px', cursor: 'pointer', fontWeight: 'bold' }}>{tab} 0</button>
+                        <button key={tab} onClick={() => setBellTab(tab)} style={{ flex: 1, padding: '11px', border: 'none', backgroundColor: bellTab === tab ? BG : 'transparent', color: bellTab === tab ? PURPLE : '#aaa', fontSize: '13px', cursor: 'pointer', fontWeight: 'bold' }}>{tab} 0</button>
                       ))}
                     </div>
                     <div style={{ padding: '24px', textAlign: 'center', color: '#666', fontSize: '13px' }}>No notifications</div>
@@ -260,13 +267,13 @@ export default function Home() {
                 )}
               </div>
               <div style={{ position: 'relative' }}>
-                <button onClick={toggleProfile} style={{ width: '34px', height: '34px', borderRadius: '50%', backgroundColor: '#6c63ff', border: 'none', color: 'white', cursor: 'pointer', fontSize: '15px' }}>👤</button>
+                <button onClick={toggleProfile} style={{ width: '34px', height: '34px', borderRadius: '50%', backgroundColor: PURPLE, border: 'none', color: 'white', cursor: 'pointer', fontSize: '15px' }}>👤</button>
                 {profileOpen && (
-                  <div style={{ position: 'absolute', top: '44px', right: 0, backgroundColor: '#13152b', border: '1px solid #6c63ff', borderRadius: '10px', width: '190px', zIndex: 10001, overflow: 'hidden' }}>
+                  <div style={{ position: 'absolute', top: '44px', right: 0, backgroundColor: CARD, border: `1px solid ${PURPLE}`, borderRadius: '10px', width: '190px', zIndex: 10001, overflow: 'hidden' }}>
                     {[{ label: 'Profile', href: '/profile' }, { label: 'History', href: '/history' }, { label: 'Watchlist', href: '/watchlist' }, { label: 'Notifications', href: '/notifications' }, { label: 'Settings', href: '/settings' }, { label: 'Logout', href: '/logout' }].map(item => (
                       <a key={item.label} href={item.href} onClick={item.label === 'Logout' ? handleLogout : undefined}
-                        style={{ display: 'block', padding: '11px 16px', color: item.label === 'Logout' ? '#ff4444' : 'white', textDecoration: 'none', fontSize: '13px', borderBottom: '1px solid #0d0f1a' }}
-                        onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#0d0f1a')}
+                        style={{ display: 'block', padding: '11px 16px', color: item.label === 'Logout' ? '#ff4444' : 'white', textDecoration: 'none', fontSize: '13px', borderBottom: `1px solid ${BG}` }}
+                        onMouseEnter={e => (e.currentTarget.style.backgroundColor = BG)}
                         onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
                       >{item.label}</a>
                     ))}
@@ -275,10 +282,11 @@ export default function Home() {
               </div>
             </>
           ) : (
-            <a href="/login" style={{ backgroundColor: '#6c63ff', color: 'white', textDecoration: 'none', padding: '8px 18px', borderRadius: '20px', fontWeight: 'bold', fontSize: '13px' }}>Login</a>
+            <a href="/login" style={{ backgroundColor: PINK, color: 'white', textDecoration: 'none', padding: '8px 18px', borderRadius: '6px', fontWeight: 'bold', fontSize: '13px' }}>Login</a>
           )}
         </div>
       </nav>
+
       {/* Mobile search */}
       {showSearch && isMobile && (
         <div onClick={e => e.stopPropagation()} style={{ padding: '10px 16px', backgroundColor: '#0a0b14', position: 'relative' }}>
@@ -286,9 +294,9 @@ export default function Home() {
             <input type="text" placeholder="Search anime..." value={search}
               onChange={e => handleSearchChange(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleSearch()}
-              style={{ flex: 1, padding: '10px 16px', borderRadius: '20px', border: '1px solid #6c63ff', backgroundColor: '#1a1a2e', color: 'white', fontSize: '14px', outline: 'none' }}
+              style={{ flex: 1, padding: '10px 16px', borderRadius: '20px', border: `1px solid ${PURPLE}`, backgroundColor: '#1a1a2e', color: 'white', fontSize: '14px', outline: 'none' }}
             />
-            <button onClick={handleSearch} style={{ padding: '10px 16px', backgroundColor: '#6c63ff', border: 'none', borderRadius: '20px', color: 'white', cursor: 'pointer' }}>Search</button>
+            <button onClick={handleSearch} style={{ padding: '10px 16px', backgroundColor: PURPLE, border: 'none', borderRadius: '20px', color: 'white', cursor: 'pointer' }}>Search</button>
           </div>
           {showDropdown && searchResults.length > 0 && <SearchDropdown />}
         </div>
@@ -296,9 +304,9 @@ export default function Home() {
 
       {/* Sidebar */}
       {menuOpen && (
-        <div style={{ position: 'fixed', top: 0, left: 0, height: '100vh', width: '250px', backgroundColor: '#0a0b14', zIndex: 10000, borderRight: '2px solid #6c63ff', padding: '24px 0', display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
+        <div style={{ position: 'fixed', top: 0, left: 0, height: '100vh', width: '250px', backgroundColor: '#0a0b14', zIndex: 10000, borderRight: `2px solid ${PURPLE}`, padding: '24px 0', display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 20px 20px' }}>
-            <h2 style={{ color: '#6c63ff', margin: 0, fontSize: '18px' }}>⚔️ AniStream</h2>
+            <h2 style={{ color: PURPLE, margin: 0, fontSize: '18px' }}>⚔️ AniStream</h2>
             <button onClick={() => setMenuOpen(false)} style={{ background: 'none', border: 'none', color: 'white', fontSize: '22px', cursor: 'pointer' }}>✕</button>
           </div>
           {[{ label: 'Home', href: '/home' }, { label: 'Upcoming', href: '#' }, { label: 'Ongoing', href: '#' }, { label: 'Dubbed', href: '#' }, { label: 'Completed', href: '#' }, { label: 'Watch2Gether', href: '#' }, { label: 'Advanced Search', href: '/search' }].map(item => (
@@ -311,30 +319,32 @@ export default function Home() {
       )}
       {menuOpen && <div onClick={() => setMenuOpen(false)} style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 9999 }} />}
 
-      {/* ── HERO SPOTLIGHT ── */}
+      {/* HERO SPOTLIGHT */}
       {featured && (
-        <div style={{ position: 'relative', height: isMobile ? '280px' : '460px', overflow: 'hidden' }}>
+        <div style={{ position: 'relative', height: isMobile ? '300px' : '460px', overflow: 'hidden' }}>
           <img src={featured.images.jpg.large_image_url} alt={featured.title}
-            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.45 }} />
-          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, rgba(13,15,26,0.98) 35%, rgba(13,15,26,0.3) 70%, transparent)' }} />
-          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(13,15,26,1) 0%, transparent 60%)' }} />
-          <div style={{ position: 'relative', height: '100%', display: 'flex', alignItems: 'center', padding: isMobile ? '0 16px' : '0 48px', maxWidth: '580px' }}>
+            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.5 }} />
+          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, rgba(13,15,26,0.99) 40%, rgba(13,15,26,0.2) 80%, transparent)' }} />
+          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(13,15,26,1) 0%, transparent 55%)' }} />
+          <div style={{ position: 'relative', height: '100%', display: 'flex', alignItems: 'center', padding: isMobile ? '0 16px' : '0 48px', maxWidth: '560px' }}>
             <div>
-              <p style={{ color: '#6c63ff', fontSize: '12px', fontWeight: 700, marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '1px' }}>#{featuredIndex + 1} Spotlight</p>
-              <h2 style={{ fontSize: isMobile ? '22px' : '36px', fontWeight: 'bold', margin: '0 0 10px', lineHeight: 1.2 }}>{featured.title}</h2>
+              <p style={{ color: PINK, fontSize: '11px', fontWeight: 700, marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '2px' }}>#{featuredIndex + 1} Spotlight</p>
+              <h2 style={{ fontSize: isMobile ? '24px' : '38px', fontWeight: 'bold', margin: '0 0 10px', lineHeight: 1.2 }}>{featured.title}</h2>
               <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap' }}>
+                <span style={{ backgroundColor: '#1cd37a', borderRadius: '4px', padding: '2px 7px', fontSize: '11px', fontWeight: 'bold', color: '#000' }}>HD</span>
                 <span style={{ color: '#aaa', fontSize: '12px' }}>📺 {featured.type}</span>
                 <span style={{ color: '#aaa', fontSize: '12px' }}>⭐ {featured.score}</span>
-                <span style={{ color: '#aaa', fontSize: '12px' }}>🎬 {featured.episodes ?? '?'} eps</span>
+                <span style={{ color: '#aaa', fontSize: '12px' }}>{featured.episodes ?? '?'} eps</span>
               </div>
               <p style={{ color: '#c0c0d0', fontSize: isMobile ? '12px' : '13px', marginBottom: '20px', lineHeight: 1.6, maxWidth: '460px' }}>
-                {featured.synopsis?.slice(0, isMobile ? 80 : 160)}{(featured.synopsis?.length ?? 0) > (isMobile ? 80 : 160) ? '...' : ''}
+                {featured.synopsis?.slice(0, isMobile ? 90 : 170)}{(featured.synopsis?.length ?? 0) > (isMobile ? 90 : 170) ? '...' : ''}
               </p>
               <div style={{ display: 'flex', gap: '10px' }}>
-                <button onClick={() => router.push(`/watch/${featured.mal_id}`)} style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: '#6c63ff', color: 'white', border: 'none', padding: isMobile ? '10px 18px' : '11px 22px', borderRadius: '24px', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 4px 20px rgba(108,99,255,0.4)' }}>
+                <button onClick={() => router.push(`/watch/${featured.mal_id}`)}
+                  style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: PINK, color: 'white', border: 'none', padding: isMobile ? '10px 20px' : '11px 24px', borderRadius: '6px', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer' }}>
                   ▶ Watch Now
                 </button>
-                <button style={{ backgroundColor: 'rgba(255,255,255,0.1)', color: 'white', border: '1px solid rgba(255,255,255,0.2)', padding: isMobile ? '10px 18px' : '11px 22px', borderRadius: '24px', fontSize: '13px', cursor: 'pointer', backdropFilter: 'blur(10px)' }}>
+                <button style={{ backgroundColor: 'rgba(255,255,255,0.1)', color: 'white', border: '1px solid rgba(255,255,255,0.2)', padding: isMobile ? '10px 20px' : '11px 24px', borderRadius: '6px', fontSize: '13px', cursor: 'pointer' }}>
                   Detail
                 </button>
               </div>
@@ -344,14 +354,14 @@ export default function Home() {
           <div style={{ position: 'absolute', right: isMobile ? '12px' : '40px', top: '50%', transform: 'translateY(-50%)', display: 'flex', flexDirection: 'column', gap: '6px' }}>
             {animeList.slice(0, 5).map((_, i) => (
               <div key={i} onClick={() => { setFeaturedIndex(i); setFeatured(animeList[i]) }}
-                style={{ width: '7px', height: i === featuredIndex ? '22px' : '7px', borderRadius: '4px', backgroundColor: i === featuredIndex ? '#6c63ff' : 'rgba(255,255,255,0.3)', cursor: 'pointer', transition: 'all 0.3s' }} />
+                style={{ width: '7px', height: i === featuredIndex ? '22px' : '7px', borderRadius: '4px', backgroundColor: i === featuredIndex ? PINK : 'rgba(255,255,255,0.3)', cursor: 'pointer', transition: 'all 0.3s' }} />
             ))}
           </div>
         </div>
       )}
-       {/* Recent Comments */}
-  <div style={{ marginBottom: '16px' }}>
-  <SectionHeader title="💬 Recent Comments" />
+      {/* Recent Comments */}
+<div style={{ marginBottom: '16px' }}>
+  <SectionTitle title="💬 Recent Comments" />
   <div style={{ display: 'flex', gap: '12px', overflowX: 'auto', paddingBottom: '6px', scrollbarWidth: 'none' }}>
     {recentComments.map(c => (
       <div key={c.id} style={{ minWidth: isMobile ? '230px' : '280px', backgroundColor: '#13152b', borderRadius: '10px', padding: '14px', flexShrink: 0, border: '1px solid #1e2140' }}>
@@ -371,37 +381,40 @@ export default function Home() {
   </div>
 </div>
 
-      {/* ── MAIN LAYOUT ── */}
-      <div style={{ display: isMobile ? 'block' : 'grid', gridTemplateColumns: '1fr 280px', gap: 0, maxWidth: '1400px', margin: '0 auto' }}>
+      {/* MAIN LAYOUT */}
+      <div style={{ display: isMobile ? 'block' : 'grid', gridTemplateColumns: '1fr 290px', gap: 0, maxWidth: '1400px', margin: '0 auto' }}>
 
         {/* LEFT COLUMN */}
-        <div style={{ padding: isMobile ? '16px' : '24px 24px 24px 32px', minWidth: 0, overflow: 'hidden' }}> 
+        <div style={{ padding: isMobile ? '16px' : '24px 20px 24px 28px', minWidth: 0 }}>
 
           {/* Trending */}
-          <div style={{ marginBottom: '16px' }}>
-            <SectionHeader title="🔥 Trending"
-              onLeftClick={() => scroll(trendingRef, 'left')}
-              onRightClick={() => scroll(trendingRef, 'right')} />
+          <div style={{ marginBottom: '24px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+              <h3 style={{ fontSize: isMobile ? '16px' : '19px', margin: 0, fontWeight: 700, color: PINK, borderLeft: `3px solid ${PINK}`, paddingLeft: '10px' }}>Trending</h3>
+              <div style={{ display: 'flex', gap: '6px' }}>
+                <button onClick={() => trendingRef.current?.scrollBy({ left: -300, behavior: 'smooth' })} style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: '#1a1a2e', border: `1px solid ${BORDER}`, color: 'white', cursor: 'pointer', fontSize: '14px' }}>‹</button>
+                <button onClick={() => trendingRef.current?.scrollBy({ left: 300, behavior: 'smooth' })} style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: '#1a1a2e', border: `1px solid ${BORDER}`, color: 'white', cursor: 'pointer', fontSize: '14px' }}>›</button>
+              </div>
+            </div>
             <div ref={trendingRef} style={{ display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '6px', scrollbarWidth: 'none' }}>
               {trendingList.map((anime: any, i: number) => (
-                <AnimeCard key={`t-${anime.mal_id}-${i}`} anime={anime} index={i} showRank />
+                <TrendingCard key={`t-${anime.mal_id}`} anime={anime} index={i} />
               ))}
             </div>
           </div>
-          
 
           {/* Continue Watching */}
           {continueWatching.length > 0 && (
-            <div style={{ marginBottom: '16px' }}>
-              <SectionHeader title="▶ Continue Watching" href="/history" />
+            <div style={{ marginBottom: '24px' }}>
+              <SectionTitle title="Continue Watching" href="/history" />
               <div style={{ display: 'flex', gap: '12px', overflowX: 'auto', paddingBottom: '6px', scrollbarWidth: 'none' }}>
                 {continueWatching.slice(0, 6).map(item => (
-                  <div key={item.id} style={{ minWidth: isMobile ? '150px' : '195px', backgroundColor: '#13152b', borderRadius: '10px', overflow: 'hidden', flexShrink: 0 }}>
+                  <div key={item.id} style={{ minWidth: isMobile ? '148px' : '192px', backgroundColor: CARD, borderRadius: '10px', overflow: 'hidden', flexShrink: 0 }}>
                     <div style={{ position: 'relative' }}>
-                      <img src={item.image} alt={item.title} style={{ width: '100%', height: '108px', objectFit: 'cover' }} />
+                      <img src={item.image} alt={item.title} style={{ width: '100%', height: '105px', objectFit: 'cover' }} />
                       <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '4px 8px', background: 'linear-gradient(transparent, rgba(0,0,0,0.85))' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px' }}>
-                          <span style={{ color: '#6c63ff', fontWeight: 'bold' }}>EP {item.ep}</span>
+                          <span style={{ color: PINK, fontWeight: 'bold' }}>EP {item.ep}</span>
                           <span>{item.watched}/{item.total}</span>
                         </div>
                       </div>
@@ -409,9 +422,9 @@ export default function Home() {
                     <div style={{ padding: '8px' }}>
                       <p style={{ margin: '0 0 6px', fontSize: '11px', fontWeight: 'bold' }}>{item.title.slice(0, 18)}{item.title.length > 18 ? '...' : ''}</p>
                       <div style={{ display: 'flex', gap: '6px' }}>
-                        <button onClick={() => router.push(`/watch/${item.id}`)} style={{ flex: 1, padding: '5px', backgroundColor: '#6c63ff', border: 'none', color: 'white', borderRadius: '4px', cursor: 'pointer', fontSize: '10px' }}>Resume</button>
+                        <button onClick={() => router.push(`/watch/${item.id}`)} style={{ flex: 1, padding: '5px', backgroundColor: PINK, border: 'none', color: 'white', borderRadius: '4px', cursor: 'pointer', fontSize: '10px', fontWeight: 'bold' }}>Resume</button>
                         <button onClick={() => { const u = continueWatching.filter(a => a.id !== item.id); setContinueWatching(u); try { localStorage.setItem('watchHistory', JSON.stringify(u)) } catch {} }}
-                          style={{ padding: '5px 8px', backgroundColor: 'transparent', border: '1px solid #333', color: 'white', borderRadius: '4px', cursor: 'pointer', fontSize: '10px' }}>✕</button>
+                          style={{ padding: '5px 8px', backgroundColor: 'transparent', border: `1px solid ${BORDER}`, color: 'white', borderRadius: '4px', cursor: 'pointer', fontSize: '10px' }}>✕</button>
                       </div>
                     </div>
                   </div>
@@ -420,42 +433,60 @@ export default function Home() {
             </div>
           )}
 
-          {/* Latest Episodes */}
-          <div style={{ marginBottom: '16px' }}>
-            <SectionHeader title="🎬 Latest Episodes"
-              onLeftClick={() => scroll(latestRef, 'left')}
-              onRightClick={() => scroll(latestRef, 'right')}
-              href="/search" />
-            <div ref={latestRef} style={{ display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '6px', scrollbarWidth: 'none' }}>
-              {latestEpisodes.map((anime: any, i: number) => (
-                <AnimeCard key={`le-${anime.mal_id}-${i}`} anime={anime} />
+          {/* Latest Episodes — 2-col grid like HiAnime */}
+          <div style={{ marginBottom: '24px' }}>
+            <SectionTitle title="Latest Episodes" href="/search" />
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
+              {latestEpisodes.slice(0, 12).map((anime: any, i: number) => (
+                <div key={`le-${anime.mal_id}-${i}`} onClick={() => router.push(`/watch/${anime.mal_id}`)}
+                  style={{ cursor: 'pointer', display: 'flex', gap: '10px', backgroundColor: CARD, borderRadius: '8px', overflow: 'hidden', border: `1px solid ${BORDER}` }}
+                  onMouseEnter={e => (e.currentTarget.style.borderColor = PINK)}
+                  onMouseLeave={e => (e.currentTarget.style.borderColor = BORDER)}
+                >
+                  <div style={{ position: 'relative', flexShrink: 0 }}>
+                    <img src={anime.images?.jpg?.image_url} alt={anime.title}
+                      style={{ width: '80px', height: '100px', objectFit: 'cover', display: 'block' }} />
+                    <span style={{ position: 'absolute', bottom: '4px', left: '4px', backgroundColor: '#1cd37a', borderRadius: '3px', padding: '1px 4px', fontSize: '9px', fontWeight: 'bold', color: '#000' }}>
+                      CC {anime.episodes ?? '?'}
+                    </span>
+                  </div>
+                  <div style={{ padding: '8px 8px 8px 0', flex: 1, minWidth: 0 }}>
+                    <p style={{ margin: '0 0 4px', fontSize: '12px', fontWeight: 'bold', lineHeight: 1.3, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{anime.title}</p>
+                    <p style={{ margin: 0, fontSize: '10px', color: '#8b8fa8' }}>{anime.type || 'TV'} • {anime.duration?.replace(' per ep', '') ?? 'Unknown'}</p>
+                  </div>
+                </div>
               ))}
             </div>
           </div>
 
-          {/* Most Popular Grid */}
-          <div style={{ marginBottom: '16px' }}>
-            <SectionHeader title="🌟 Most Popular" />
-            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(3, 1fr)' : 'repeat(auto-fill, minmax(145px, 1fr))', gap: '10px' }}>
-              {animeList.slice(0, 12).map((anime: any, i: number) => (
-                <GridCard key={`g-${anime.mal_id}-${i}`} anime={anime} />
+          {/* Most Popular */}
+          <div style={{ marginBottom: '24px' }}>
+            <SectionTitle title="Most Popular" />
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(3, 1fr)' : 'repeat(auto-fill, minmax(140px, 1fr))', gap: '10px' }}>
+              {animeList.map((anime: any, i: number) => (
+                <PosterCard key={`p-${anime.mal_id}-${i}`} anime={anime} />
               ))}
             </div>
           </div>
 
-          {/* Comments section toggle */}
-          <div style={{ marginBottom: '16px' }}>
+          {/* Comments */}
+          <div style={{ marginBottom: '24px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-              <h3 style={{ fontSize: isMobile ? '15px' : '18px', margin: 0, fontWeight: 700, color: '#e0e0ff' }}>💬 Comments</h3>
+              <h3 style={{ fontSize: isMobile ? '16px' : '19px', margin: 0, fontWeight: 700, color: PINK, borderLeft: `3px solid ${PINK}`, paddingLeft: '10px' }}>Comments</h3>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span style={{ color: '#aaa', fontSize: '12px' }}>Hide</span>
-                <div onClick={() => setShowComments(p => !p)} style={{ width: '40px', height: '22px', borderRadius: '11px', backgroundColor: showComments ? '#6c63ff' : '#333', cursor: 'pointer', position: 'relative', transition: 'background 0.2s' }}>
-                  <div style={{ position: 'absolute', top: '3px', left: showComments ? '21px' : '3px', width: '16px', height: '16px', borderRadius: '50%', backgroundColor: 'white', transition: 'left 0.2s' }} />
+                <div onClick={() => setShowComments(p => !p)} style={{ width: '38px', height: '20px', borderRadius: '10px', backgroundColor: showComments ? PINK : '#333', cursor: 'pointer', position: 'relative', transition: 'background 0.2s' }}>
+                  <div style={{ position: 'absolute', top: '3px', left: showComments ? '20px' : '3px', width: '14px', height: '14px', borderRadius: '50%', backgroundColor: 'white', transition: 'left 0.2s' }} />
                 </div>
               </div>
             </div>
             {showComments && (
-              <div style={{ backgroundColor: '#13152b', borderRadius: '10px', padding: '16px', border: '1px solid #1e2140' }}>
+              <div style={{ backgroundColor: CARD, borderRadius: '10px', padding: '16px', border: `1px solid ${BORDER}` }}>
+                <div style={{ display: 'flex', gap: '16px', marginBottom: '12px', borderBottom: `1px solid ${BORDER}`, paddingBottom: '12px' }}>
+                  {['Newest Comments', 'Top Comments'].map(t => (
+                    <span key={t} style={{ fontSize: '13px', color: t === 'Newest Comments' ? PINK : '#aaa', fontWeight: t === 'Newest Comments' ? 'bold' : 'normal', cursor: 'pointer', borderBottom: t === 'Newest Comments' ? `2px solid ${PINK}` : 'none', paddingBottom: '4px' }}>{t}</span>
+                  ))}
+                </div>
                 <p style={{ color: '#aaa', fontSize: '13px', margin: 0, textAlign: 'center' }}>No comments yet. Be the first to comment!</p>
               </div>
             )}
@@ -463,69 +494,21 @@ export default function Home() {
 
           {/* Mobile Top 10 */}
           {isMobile && (
-            <div style={{ marginBottom: '16px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                <h3 style={{ fontSize: '15px', margin: 0, color: '#6c63ff', fontWeight: 700 }}>🏆 Top 10</h3>
+            <div style={{ marginBottom: '24px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+                <h3 style={{ fontSize: '16px', margin: 0, fontWeight: 700, color: PINK, borderLeft: `3px solid ${PINK}`, paddingLeft: '10px' }}>Top 10</h3>
                 <div style={{ display: 'flex', gap: '4px' }}>
                   {['Today', 'Weekly', 'Monthly'].map(t => (
-                    <button key={t} onClick={() => setTop10Tab(t)} style={{ padding: '5px 12px', borderRadius: '6px', border: 'none', fontSize: '12px', cursor: 'pointer', backgroundColor: top10Tab === t ? '#ff2475' : 'transparent', color: top10Tab === t ? 'white' : '#aaa', fontWeight: top10Tab === t ? 'bold' : 'normal' }}>{t}</button>
+                    <button key={t} onClick={() => setTop10Tab(t)} style={{ padding: '5px 10px', borderRadius: '5px', border: 'none', fontSize: '11px', cursor: 'pointer', backgroundColor: top10Tab === t ? PINK : '#1a1a2e', color: top10Tab === t ? 'white' : '#aaa', fontWeight: top10Tab === t ? 'bold' : 'normal' }}>{t}</button>
                   ))}
                 </div>
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {animeList.slice(0, 10).map((anime: any, i: number) => (
-                  <div key={anime.mal_id} onClick={() => router.push(`/watch/${anime.mal_id}`)}
-                    style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px', backgroundColor: '#13152b', borderRadius: '8px', cursor: 'pointer' }}>
-                    <span style={{ fontSize: '16px', fontWeight: 'bold', color: i < 3 ? '#6c63ff' : '#555', minWidth: '26px' }}>{String(i + 1).padStart(2, '0')}</span>
-                    <img src={anime.images.jpg.image_url} alt={anime.title} style={{ width: '42px', height: '56px', objectFit: 'cover', borderRadius: '4px', flexShrink: 0 }} />
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <p style={{ margin: 0, fontSize: '12px', fontWeight: 'bold', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{anime.title}</p>
-                      <div style={{ display: 'flex', gap: '6px', marginTop: '4px', alignItems: 'center' }}>
-                        <span style={{ backgroundColor: '#6c63ff', borderRadius: '3px', padding: '1px 5px', fontSize: '9px', fontWeight: 'bold' }}>SUB {anime.episodes ?? '?'}</span>
-                        <span style={{ color: '#aaa', fontSize: '10px' }}>⭐ {anime.score ?? 'N/A'}</span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <Top10List />
             </div>
-          )}
-        </div>
+          )}</div>
+        
+       
 
-        {/* RIGHT COLUMN — desktop Top 10 */}
-        {!isMobile && (
-          <div style={{ padding: '24px 20px 24px 0', borderLeft: '1px solid #1a1a2e' }}>
-            <div style={{ position: 'sticky', top: '80px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-                <h3 style={{ fontSize: '17px', margin: 0, fontWeight: 700, color: '#6c63ff' }}>🏆 Top 10</h3>
-                <div style={{ display: 'flex', gap: '4px' }}>
-                  {['Today', 'Week', 'Month'].map(t => (
-                    <button key={t} onClick={() => setTop10Tab(t)} style={{ padding: '4px 10px', borderRadius: '12px', border: 'none', fontSize: '11px', cursor: 'pointer', backgroundColor: top10Tab === t ? '#6c63ff' : '#1a1a2e', color: top10Tab === t ? 'white' : '#aaa' }}>{t}</button>
-                  ))}
-                </div>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {animeList.slice(0, 10).map((anime: any, i: number) => (
-                  <div key={anime.mal_id} onClick={() => router.push(`/watch/${anime.mal_id}`)}
-                    style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px', backgroundColor: '#13152b', borderRadius: '8px', cursor: 'pointer', border: '1px solid transparent', transition: 'border 0.2s' }}
-                    onMouseEnter={e => (e.currentTarget.style.borderColor = '#6c63ff')}
-                    onMouseLeave={e => (e.currentTarget.style.borderColor = 'transparent')}
-                  >
-                    <span style={{ fontSize: '17px', fontWeight: 'bold', color: i < 3 ? '#6c63ff' : '#444', minWidth: '24px', textAlign: 'center' }}>{String(i + 1).padStart(2, '0')}</span>
-                    <img src={anime.images.jpg.image_url} alt={anime.title} style={{ width: '42px', height: '56px', objectFit: 'cover', borderRadius: '4px', flexShrink: 0 }} />
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <p style={{ margin: 0, fontSize: '12px', fontWeight: 'bold', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{anime.title}</p>
-                      <div style={{ display: 'flex', gap: '6px', marginTop: '4px', alignItems: 'center' }}>
-                        <span style={{ backgroundColor: '#6c63ff', borderRadius: '3px', padding: '1px 5px', fontSize: '9px', fontWeight: 'bold' }}>SUB {anime.episodes ?? '?'}</span>
-                        <span style={{ color: '#aaa', fontSize: '10px' }}>⭐ {anime.score ?? 'N/A'}</span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     </main>
   )
