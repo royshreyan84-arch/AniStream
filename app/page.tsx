@@ -12,35 +12,8 @@ export default function Landing() {
       color: 'white',
     }}>
 
-      {/* Navbar */}
-      <nav style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        flexWrap: 'wrap',
-        gap: '16px',
-        padding: '20px clamp(16px, 5vw, 40px)',
-        borderBottom: '1px solid rgba(255,255,255,0.06)',
-      }}>
-        <a href="/" style={{
-          color: '#6c63ff', fontSize: '24px', fontWeight: 'bold',
-          textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '8px',
-        }}>
-          ⚔️ AniStream
-        </a>
-
-        <div style={{ display: 'flex', gap: '32px', flexWrap: 'wrap' }}>
-          {['Home', 'Movies', 'TV Series', 'Most Popular', 'Top Airing'].map(link => (
-            <a key={link} href="/home" style={{
-              color: '#c0c0d0', textDecoration: 'none', fontSize: '14px', fontWeight: 600,
-            }}>
-              {link}
-            </a>
-          ))}
-        </div>
-
+     
         
-      </nav>
 
       {/* Hero */}
 <div style={{ padding: 'clamp(16px, 4vw, 32px) clamp(16px, 5vw, 40px)' }}>
