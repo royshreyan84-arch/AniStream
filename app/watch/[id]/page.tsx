@@ -196,7 +196,8 @@ export default function WatchPage() {
   const [fallbackIndex, setFallbackIndex] = useState(0)
   const fallbackSources = [
     `https://embed.su/embed/anime/${animeId}/${currentEp}`,
-    `https://multiembed.mov/?video_id=${animeId}&ep=${currentEp}&tmdb=1`,
+    `https://player.smashy.stream/anime/${animeId}?ep=${currentEp}`,
+    `https://www.2embed.skin/embedtvfull/${animeId}/${currentEp}`,
   ]
   const playerUrl = (() => {
     if (!anikotoError && currentEpObj?.anikotoEmbedId) {

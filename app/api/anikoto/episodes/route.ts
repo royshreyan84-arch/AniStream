@@ -2,6 +2,7 @@
 // Proxies requests to anikoto-api.onrender.com to avoid CORS
 
 import { NextRequest, NextResponse } from 'next/server'
+export const maxDuration=30
 
 async function safeJson(res: Response) {
   const text = await res.text()
