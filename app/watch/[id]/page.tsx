@@ -349,19 +349,18 @@ export default function WatchPage() {
   }
   // ── Sub-components ─────────────────────────────────────────────────────────────
 
-  const VideoPlayer = () => (
-    <div style={{ backgroundColor: '#000', borderRadius: '12px', overflow: 'hidden', position: 'relative', paddingTop: '56.25%', marginBottom: '10px' }}>
-      <iframe
-  key={playerUrl}
-  src={playerUrl}
-  allowFullScreen
-  referrerPolicy="origin"
-  style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 'none' }}
-  allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
-  
-/>
-    </div>
-  )
+ const VideoPlayer = () => (
+  <div style={{ backgroundColor: '#000', borderRadius: '12px', overflow: 'hidden', position: 'relative', paddingTop: '56.25%', marginBottom: '10px' }}>
+    <iframe
+      key={playerUrl}
+      src={playerUrl}
+      allowFullScreen
+      referrerPolicy="no-referrer"
+      style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 'none' }}
+      allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
+    />
+  </div>
+)
 
   const NextEpisodeCountdown = () => {
     if (!nextUnreleased || !countdown) return null
