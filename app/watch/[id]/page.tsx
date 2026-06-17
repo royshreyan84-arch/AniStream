@@ -1,4 +1,5 @@
 'use client'
+import {getAudioPref,saveAudioPref, getLastEpisode, saveLastEpisode, getUsername, refreshSessionActivity} from '@/app/lib/cookies'
 import { supabase } from '@/app/lib/supabaseClient'
 import { useState, useEffect, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
@@ -167,7 +168,7 @@ export default function WatchPage() {
   const [synopsisExpanded, setSynopsisExpanded] = useState(false)
   const [anikotoError, setAnikotoError] = useState(false)
 
-  const [audioType, setAudioType] = useState<'sub' | 'dub'>('sub')
+  const [audioType, setAudioType] = useState<'sub' | 'dub'>(()=>typeof window!=='undefined'?getAudioPref():'sub')
   const [autoPlay, setAutoPlay] = useState(true)
   const [autoNext, setAutoNext] = useState(true)
   const [autoSkipIntro, setAutoSkipIntro] = useState(true)
@@ -194,7 +195,6 @@ export default function WatchPage() {
   // 2. 2embed.org — reliable MAL-based fallback
   const [fallbackIndex, setFallbackIndex] = useState(0)
   const fallbackSources = [
-    `https://www.2embed.cc/embedtvfull/${animeId}/${currentEp}`,
     `https://embed.su/embed/anime/${animeId}/${currentEp}`,
     `https://multiembed.mov/?video_id=${animeId}&ep=${currentEp}&tmdb=1`,
   ]
@@ -332,7 +332,7 @@ export default function WatchPage() {
   const filteredEpisodes = episodes.filter(ep =>
     episodeSearch.trim() === '' || ep.number.toString().includes(episodeSearch.trim())
   )
-  const switchEpisode = (epNum: number) => { setCurrentEp(epNum); setAnikotoError(false) }
+  const switchEpisode = (epNum: number) => { setCurrentEp(epNum); setAnikotoError(false); saveLastEpisode(animeId, epNum); refreshSessionActivity() }
 
   // ── Loading ────────────────────────────────────────────────────────────────────
 
@@ -355,6 +355,7 @@ export default function WatchPage() {
         src={playerUrl}
         allowFullScreen
         referrerPolicy="origin"
+        sandbox="allow-scripts allow-same-origin"
         style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 'none' }}
         allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
       />
@@ -492,7 +493,7 @@ export default function WatchPage() {
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
         <span style={{ color: COLORS.muted, fontSize: '13px', fontWeight: 700 }}>Audio:</span>
         {(['sub', 'dub'] as const).map(type => (
-          <button key={type} onClick={() => setAudioType(type)} style={{ padding: '8px 20px', borderRadius: '8px', border: `1px solid ${audioType === type ? COLORS.pink : COLORS.border}`, backgroundColor: audioType === type ? '#3a1530' : COLORS.cardHover, color: audioType === type ? COLORS.pink : COLORS.text, fontWeight: 700, fontSize: '13px', cursor: 'pointer', textTransform: 'uppercase' }}>{type}</button>
+          <button key={type} onClick={() => {setAudioType(type); saveAudioPref(type)}} style={{ padding: '8px 20px', borderRadius: '8px', border: `1px solid ${audioType === type ? COLORS.pink : COLORS.border}`, backgroundColor: audioType === type ? '#3a1530' : COLORS.cardHover, color: audioType === type ? COLORS.pink : COLORS.text, fontWeight: 700, fontSize: '13px', cursor: 'pointer', textTransform: 'uppercase' }}>{type}</button>
         ))}
       </div>
       <p style={{ color: '#fbbf24', fontSize: '12px', margin: '10px 0 0' }}>
