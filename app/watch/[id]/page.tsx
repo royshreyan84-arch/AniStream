@@ -195,8 +195,8 @@ export default function WatchPage() {
   // 2. 2embed.org — reliable MAL-based fallback
   const [fallbackIndex, setFallbackIndex] = useState(0)
   const fallbackSources = [
-    `https://vidsrc.su/embed/anime/${animeId}/${currentEp}`,
-    `https://vidsrc.me/embed/anime?mal=${animeId}?ep={currentEp}`,
+    `https://player.vidplus.to/embed/anime/${animeId}/${currentEp}`,
+    `https://anime.autoembed.cc/embed/anime?mal=${animeId}-episode={currentEp}`,
     `https://vidsrc.xyz/embed/anime?mal=${animeId}&episode=${currentEp}`,
   ]
   const playerUrl = (() => {
