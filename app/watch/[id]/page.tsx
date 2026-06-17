@@ -358,7 +358,7 @@ export default function WatchPage() {
   referrerPolicy="origin"
   style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 'none' }}
   allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
-  sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-presentation"
+  
 />
     </div>
   )
