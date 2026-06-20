@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { RecentComment } from '@/app/lib/types'
 import { Navbar } from '../lib/Navbar'
+import  Footer  from '@/app/lib/components/Footer';
 
 const PINK = '#ff2475'
 const PURPLE = '#6c63ff'
@@ -172,6 +173,7 @@ export default function Home() {
   )
 
   return (
+    <>
     <main style={{ backgroundColor: BG, minHeight: '100vh', color: 'white', fontFamily: 'sans-serif' }}>
 
       <Navbar
@@ -425,6 +427,9 @@ export default function Home() {
           }
         }
       `}</style>
+      
     </main>
-  )
+    <Footer />
+    </>
+    );
 }

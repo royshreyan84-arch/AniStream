@@ -3,6 +3,7 @@ import {getAudioPref,saveAudioPref, getLastEpisode, saveLastEpisode, getUsername
 import { supabase } from '@/app/lib/supabaseClient'
 import { useState, useEffect, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
+import  Footer  from '@/app/lib/components/Footer';
 
 const COLORS = {
   primary: '#6c63ff',
@@ -616,6 +617,7 @@ export default function WatchPage() {
           <div style={{ position: 'sticky', top: '70px' }}><AnimeInfoCard /></div>
         </div>
       )}
+      <Footer />
     </div>
   )
 }
