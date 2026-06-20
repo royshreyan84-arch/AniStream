@@ -35,7 +35,7 @@ export default function Home() {
   ])
 
   useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth < 768)
+    const check = () => setIsMobile(window.innerWidth < 1028)
     check()
     window.addEventListener('resize', check)
     return () => window.removeEventListener('resize', check)
