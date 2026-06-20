@@ -590,13 +590,100 @@ export default function WatchPage() {
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: COLORS.dark, color: COLORS.text, fontFamily: 'system-ui, sans-serif' }}>
-      <nav style={{ backgroundColor: COLORS.card, borderBottom: `1px solid ${COLORS.border}`, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '12px', position: 'sticky', top: 0, zIndex: 100 }}>
-        <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: COLORS.primary, cursor: 'pointer', fontSize: '18px', fontWeight: 600, flexShrink: 0 }}>← Back</button>
-        <span style={{ color: COLORS.muted, flexShrink: 0 }}>|</span>
-        <span style={{ fontWeight: 600, fontSize: isMobile ? '12px' : '14px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
-          {animeInfo?.title} — Episode {currentEp}
-        </span>
-      </nav>
+     
+
+<nav style={{ backgroundColor: COLORS.card, borderBottom: `1px solid ${COLORS.border}`, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '12px', position: 'sticky', top: 0, zIndex: 100 }}>
+  
+  {/* Back button */}
+  <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: COLORS.primary, cursor: 'pointer', fontSize: '18px', fontWeight: 600, flexShrink: 0 }}>
+    ← Back
+  </button>
+  <span style={{ color: COLORS.muted, flexShrink: 0 }}>|</span>
+
+  {/* Anime title */}
+  <span style={{ fontWeight: 600, fontSize: isMobile ? '12px' : '14px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
+    {animeInfo?.title} — Episode {currentEp}
+  </span>
+
+  {/* Search */}
+  {showWatchSearch && (
+    <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: '6px' }}>
+      <input
+        autoFocus
+        type="text"
+        placeholder="Search anime..."
+        value={watchSearch}
+        onChange={e => serWatchSearch(e.target.value)}
+        onKeyDown={e => {
+          if (e.key === 'Enter' && watchSearch.trim()) {
+            window.location.href = `/search?q=${encodeURIComponent(watchSearch)}`
+          }
+          if (e.key === 'Escape') setShowwatchSearch(false)
+        }}
+        style={{ width: isMobile ? '140px' : '220px', padding: '7px 14px', borderRadius: '20px', border: `1px solid ${COLORS.primary}`, backgroundColor: COLORS.dark, color: 'white', fontSize: '13px', outline: 'none' }}
+      />
+      <button onClick={() => setShowwatchSearch(false)} style={{ background: 'none', border: 'none', color: COLORS.muted, cursor: 'pointer', fontSize: '18px' }}>✕</button>
+    </div>
+  )}
+  {!showWatchSearch && (
+    <button onClick={() => setShowwatchSearch(true)} style={{ background: 'none', border: 'none', color: 'white', fontSize: '18px', cursor: 'pointer', flexShrink: 0 }}>🔍</button>
+  )}
+
+  {/* Bell */}
+  <div style={{ position: 'relative', flexShrink: 0 }}>
+    <button
+      onClick={() => { setShowWatchBell(p => !p); setShowWatchProfile(false) }}
+      style={{ background: 'none', border: 'none', color: 'white', fontSize: '18px', cursor: 'pointer' }}
+    >🔔</button>
+    {showWatchBell && (
+      <div style={{ position: 'absolute', top: '44px', right: 0, backgroundColor: COLORS.card, border: `1px solid ${COLORS.primary}`, borderRadius: '10px', width: '260px', zIndex: 200, overflow: 'hidden' }}>
+        <div style={{ display: 'flex', borderBottom: `1px solid ${COLORS.border}` }}>
+          {['Anime', 'Community'].map(tab => (
+            <button key={tab} style={{ flex: 1, padding: '10px', border: 'none', backgroundColor: COLORS.dark, color: COLORS.primary, fontSize: '13px', cursor: 'pointer', fontWeight: 'bold' }}>{tab} 0</button>
+          ))}
+        </div>
+        <div style={{ padding: '20px', textAlign: 'center', color: '#666', fontSize: '13px' }}>No notifications</div>
+      </div>
+    )}
+  </div>
+
+  {/* Profile or Login */}
+  <div style={{ position: 'relative', flexShrink: 0 }}>
+    {isWatchloggedIn ? (
+      <>
+        <button
+          onClick={() => { setShowWatchProfile(p => !p); setShowWatchBell(false) }}
+          style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: COLORS.primary, border: 'none', color: 'white', cursor: 'pointer', fontSize: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+        >👤</button>
+        {showWatchProfile && (
+          <div style={{ position: 'absolute', top: '44px', right: 0, backgroundColor: COLORS.card, border: `1px solid ${COLORS.primary}`, borderRadius: '10px', width: '180px', zIndex: 200, overflow: 'hidden' }}>
+            {[
+              { label: 'Profile', href: '/profile' },
+              { label: 'History', href: '/history' },
+              { label: 'Watchlist', href: '/watchlist' },
+              { label: 'Settings', href: '/settings' },
+              { label: 'Logout', href: '#' },
+            ].map(item => (
+              <a key={item.label} href={item.href}
+                onClick={item.label === 'Logout' ? (e) => {
+                  e.preventDefault()
+                  localStorage.removeItem('isLoggedIn')
+                  localStorage.removeItem('username')
+                  router.push('/login')
+                } : undefined}
+                style={{ display: 'block', padding: '10px 14px', color: item.label === 'Logout' ? '#ff4444' : 'white', textDecoration: 'none', fontSize: '13px', borderBottom: `1px solid ${COLORS.dark}` }}
+                onMouseEnter={e => (e.currentTarget.style.backgroundColor = COLORS.dark)}
+                onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+              >{item.label}</a>
+            ))}
+          </div>
+        )}
+      </>
+    ) : (
+      <a href="/login" style={{ backgroundColor: '#ff2475', color: 'white', textDecoration: 'none', padding: '7px 14px', borderRadius: '6px', fontWeight: 'bold', fontSize: '12px' }}>Login</a>
+    )}
+  </div>
+</nav>
 
       {isMobile ? (
         <div style={{ padding: '12px' }}>
