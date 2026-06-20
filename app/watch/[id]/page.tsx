@@ -5,6 +5,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import  Footer  from '@/app/lib/components/Footer';
 
+
 const COLORS = {
   primary: '#6c63ff',
   pink: '#ff2475',
@@ -168,6 +169,12 @@ export default function WatchPage() {
   const [episodeSearch, setEpisodeSearch] = useState('')
   const [synopsisExpanded, setSynopsisExpanded] = useState(false)
   const [anikotoError, setAnikotoError] = useState(false)
+  const [watchSearch, serWatchSearch]=useState('')
+  const [showWatchSearch, setShowwatchSearch]=useState(false)
+  const [showWatchBell, setShowWatchBell]=useState(false)
+  const [showWatchProfile, setShowWatchProfile]=useState(false)
+  const [isWatchloggedIn, setIsWatchLoggedIn]=useState(false)
+
 
   const [audioType, setAudioType] = useState<'sub' | 'dub'>(()=>typeof window!=='undefined'?getAudioPref():'sub')
   const [autoPlay, setAutoPlay] = useState(true)
@@ -264,6 +271,7 @@ export default function WatchPage() {
   useEffect(() => {
     const storedUser = localStorage.getItem('username')
     if (storedUser) setUsername(storedUser)
+    setIsWatchLoggedIn(localStorage.getItem('isLoggedIn')==='true')  
     const checkMobile = () => setIsMobile(window.innerWidth < 1024)
     checkMobile()
     window.addEventListener('resize', checkMobile)
