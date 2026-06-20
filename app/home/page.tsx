@@ -1,4 +1,5 @@
 "use client"
+import { Analytics } from "@vercel/analytics/next"
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { RecentComment } from '@/app/lib/types'
