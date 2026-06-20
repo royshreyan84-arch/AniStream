@@ -411,7 +411,7 @@ export default function Home() {
           display: none;
         }
 
-        @media (min-width: 768px) {
+        @media (min-width: 1024px) {
           .home-main-grid {
             display: grid;
             grid-template-columns: 1fr 290px;

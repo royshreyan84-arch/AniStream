@@ -72,16 +72,54 @@ body {
   color: #b7ff00;
 }
 
-/* Hide mobile search icon on PC */
-@media (min-width: 768px) {
+/* ── RESPONSIVE NAV ── */
+/* Hide mobile search icon on desktop (1024px+) */
+@media (min-width: 1024px) {
   .mobile-search-btn {
     display: none !important;
   }
 }
 
-/* Hide PC search bar on mobile */
-@media (max-width: 767px) {
+/* Hide desktop search bar + nav links on mobile */
+@media (max-width: 1023px) {
   .pc-search {
     display: none !important;
+  }
+  .nav-desktop-only {
+    display: none !important;
+  }
+}
+
+/* ── HOME PAGE GRID ── */
+.home-main-grid {
+  display: block;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+.home-left-col {
+  padding: 16px;
+  min-width: 0;
+}
+.home-top10-mobile {
+  display: block;
+}
+.home-top10-desktop {
+  display: none;
+}
+
+@media (min-width: 1024px) {
+  .home-main-grid {
+    display: grid;
+    grid-template-columns: 1fr 290px;
+    gap: 0;
+  }
+  .home-left-col {
+    padding: 24px 20px 24px 28px;
+  }
+  .home-top10-mobile {
+    display: none;
+  }
+  .home-top10-desktop {
+    display: block;
   }
 }

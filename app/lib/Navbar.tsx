@@ -64,7 +64,7 @@ export const Navbar = ({
   }
 
   useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth < 768)
+    const check = () => setIsMobile(window.innerWidth < 1024)
     check()
     window.addEventListener('resize', check)
     return () => window.removeEventListener('resize', check)
@@ -225,10 +225,10 @@ export const Navbar = ({
             {/* Extra nav links — desktop only */}
             {!isMobile && (
               <>
-                <a href="/search" style={{ color: '#c0c0d0', textDecoration: 'none', fontSize: '13px', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <a className="nav-desktop-only" href="/search" style={{ color: '#c0c0d0', textDecoration: 'none', fontSize: '13px', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '4px' }}>
                   🔀 Random
                 </a>
-                <a href="#" style={{ color: '#c0c0d0', textDecoration: 'none', fontSize: '13px', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <a className="nav-desktop-only" href="/watch2gether" style={{ color: '#c0c0d0', textDecoration: 'none', fontSize: '13px', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '4px' }}>
                   👥 Watch2gether
                 </a>
               </>
