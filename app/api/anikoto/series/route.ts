@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
 
   try {
     const res = await fetch(
-      `https://anikotoapi.site/series/${encodeURIComponent(id)}`,
+      `http://anikotoapi.site/series/${encodeURIComponent(id)}`,
       { next: { revalidate: 1800 } },
     )
     const data = await safeJson(res)
