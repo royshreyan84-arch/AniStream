@@ -1,5 +1,6 @@
 'use client'
 import { useState, type CSSProperties } from 'react'
+import { supabase } from '@/app/lib/supabaseClient'
 
 type View = 'auth' | 'forgot' | 'sent' | 'reset'
 
@@ -11,6 +12,8 @@ export default function Login() {
   const [username, setUsername] = useState('')
   const [rememberMe, setRememberMe] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
+  const [authError, setAuthError] = useState('')
+  const [submitting, setSubmitting] = useState(false)
 
   // Forgot password state
   const [resetEmail, setResetEmail] = useState('')
@@ -20,11 +23,52 @@ export default function Login() {
   const [resetError, setResetError] = useState('')
   const [resetSuccess, setResetSuccess] = useState(false)
 
-  const handleSubmit = () => {
-    localStorage.setItem('isLoggedIn', 'true')
-    localStorage.setItem('username', isLogin ? email : username)
-    if (rememberMe) localStorage.setItem('rememberMe', 'true')
-    window.location.href = '/home'
+  const handleSubmit = async () => {
+    setAuthError('')
+    if (!email.trim() || !password.trim()) {
+      setAuthError('Please enter both email and password')
+      return
+    }
+    if (!isLogin && !username.trim()) {
+      setAuthError('Please choose a username')
+      return
+    }
+
+    setSubmitting(true)
+    try {
+      if (isLogin) {
+        const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+        if (error) { setAuthError(error.message); return }
+        const u = data.user
+        const resolvedUsername = u?.user_metadata?.username || u?.email?.split('@')[0] || email
+        localStorage.setItem('isLoggedIn', 'true')
+        localStorage.setItem('username', resolvedUsername)
+        if (rememberMe) localStorage.setItem('rememberMe', 'true')
+        window.location.href = '/home'
+      } else {
+        const { data, error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: { data: { username } },
+        })
+        if (error) { setAuthError(error.message); return }
+
+        // If email confirmation is required, Supabase won't return a session yet.
+        if (!data.session) {
+          setAuthError('Account created! Check your email to confirm before logging in.')
+          setIsLogin(true)
+          return
+        }
+
+        localStorage.setItem('isLoggedIn', 'true')
+        localStorage.setItem('username', username)
+        window.location.href = '/home'
+      }
+    } catch (err: any) {
+      setAuthError(err?.message || 'Something went wrong. Please try again.')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   const goToLogin = () => {
@@ -34,25 +78,28 @@ export default function Login() {
     setResetSuccess(false)
   }
 
-  // Step 1: user submits their email
-  const handleSendResetLink = () => {
+  // Step 1: user submits their email — sends a real Supabase password reset email
+  const handleSendResetLink = async () => {
     if (!resetEmail) {
       setResetError('Please enter your email address')
       return
     }
     setResetError('')
 
-    // TODO (Supabase): replace the line below with:
-    // await supabase.auth.resetPasswordForEmail(resetEmail, {
-    //   redirectTo: `${window.location.origin}/reset-password`,
-    // })
-    localStorage.setItem('resetEmail', resetEmail)
+    const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    })
+    if (error) { setResetError(error.message); return }
 
     setView('sent')
   }
 
   // Step 3: user submits new password
-  const handleResetPassword = () => {
+  // NOTE: this only works if the user arrived here via a valid Supabase recovery
+  // session (i.e. clicked the real reset link from their email, which lands on
+  // /reset-password and establishes a session). It will not work from this modal
+  // directly since there's no recovery token here.
+  const handleResetPassword = async () => {
     if (!newPassword || !confirmPassword) {
       setResetError('Please fill in both fields')
       return
@@ -67,9 +114,8 @@ export default function Login() {
     }
     setResetError('')
 
-    // TODO (Supabase): replace the line below with:
-    // await supabase.auth.updateUser({ password: newPassword })
-    localStorage.setItem('password_' + resetEmail, newPassword)
+    const { error } = await supabase.auth.updateUser({ password: newPassword })
+    if (error) { setResetError(error.message); return }
 
     setResetSuccess(true)
     setTimeout(goToLogin, 1800)
@@ -109,10 +155,11 @@ export default function Login() {
     width: '100%', padding: '13px',
     background: 'linear-gradient(135deg, #6c63ff, #8b5cf6)',
     color: 'white', border: 'none', borderRadius: '8px',
-    fontSize: '15px', fontWeight: 'bold', cursor: 'pointer',
+    fontSize: '15px', fontWeight: 'bold', cursor: submitting ? 'not-allowed' : 'pointer',
     letterSpacing: '0.3px',
     boxShadow: '0 4px 20px rgba(108,99,255,0.4)',
     transition: 'opacity 0.2s',
+    opacity: submitting ? 0.7 : 1,
   }
 
   const eyeButtonStyle: CSSProperties = {
@@ -218,14 +265,14 @@ export default function Login() {
               padding: '4px',
               border: '1px solid rgba(255,255,255,0.08)'
             }}>
-              <button onClick={() => setIsLogin(true)} style={{
+              <button onClick={() => { setIsLogin(true); setAuthError('') }} style={{
                 flex: 1, padding: '9px', border: 'none', borderRadius: '30px',
                 backgroundColor: isLogin ? '#6c63ff' : 'transparent',
                 color: isLogin ? 'white' : '#8b8fa8',
                 cursor: 'pointer', fontWeight: 'bold', fontSize: '14px',
                 transition: 'all 0.2s',
               }}>Login</button>
-              <button onClick={() => setIsLogin(false)} style={{
+              <button onClick={() => { setIsLogin(false); setAuthError('') }} style={{
                 flex: 1, padding: '9px', border: 'none', borderRadius: '30px',
                 backgroundColor: !isLogin ? '#6c63ff' : 'transparent',
                 color: !isLogin ? 'white' : '#8b8fa8',
@@ -233,7 +280,6 @@ export default function Login() {
                 transition: 'all 0.2s',
               }}>Sign Up</button>
             </div>
-
             {/* Username (sign up only) */}
             {!isLogin && (
               <div style={{ marginBottom: '14px' }}>
@@ -305,30 +351,28 @@ export default function Login() {
               </div>
             )}
 
+            {authError && <p style={errorStyle}>{authError}</p>}
+
             {/* Submit button */}
             <button
               onClick={handleSubmit}
+              disabled={submitting}
               style={primaryButtonStyle}
-              onMouseEnter={e => (e.currentTarget.style.opacity = '0.9')}
-              onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
+              onMouseEnter={e => { if (!submitting) e.currentTarget.style.opacity = '0.9' }}
+              onMouseLeave={e => { if (!submitting) e.currentTarget.style.opacity = '1' }}
             >
-              {isLogin ? 'Login' : 'Create Account'}
+              {submitting ? 'Please wait...' : (isLogin ? 'Login' : 'Create Account')}
             </button>
 
             {/* Bottom links */}
             <p style={{ textAlign: 'center', color: '#8b8fa8', marginTop: '20px', fontSize: '13px' }}>
               {isLogin ? "Don't have an account? " : 'Already have an account? '}
               <span
-                onClick={() => setIsLogin(p => !p)}
+                onClick={() => { setIsLogin(p => !p); setAuthError('') }}
                 style={{ color: '#6c63ff', cursor: 'pointer', fontWeight: 600 }}
               >
                 {isLogin ? 'Register' : 'Login'}
               </span>
-              {isLogin && (
-                <> {' or '}
-                  <span style={{ color: '#6c63ff', cursor: 'pointer', fontWeight: 600 }}>Verify</span>
-                </>
-              )}
             </p>
           </>
         )}
@@ -374,31 +418,21 @@ export default function Login() {
             <div style={{ textAlign: 'center', fontSize: '40px', marginBottom: '12px' }}>📧</div>
             <h2 style={titleStyle}>Check your email!</h2>
             <p style={subtitleStyle}>
-              We've sent a password reset link to{' '}
+              We've sent a real password reset link to{' '}
               <strong style={{ color: 'white' }}>{resetEmail}</strong>.
-              Click the link in the email to continue.
+              Click the link in the email — it'll take you to a page where you can set a new password.
             </p>
-
-            {/*
-              DEV / DUMMY ONLY — there's no real email being sent yet.
-              This button simulates the user clicking the link from their inbox.
-              Once Supabase is wired up, real emails will redirect users
-              straight to the reset-password page (this button can be removed).
-            */}
-            <button
-              onClick={() => setView('reset')}
-              style={primaryButtonStyle}
-              onMouseEnter={e => (e.currentTarget.style.opacity = '0.9')}
-              onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
-            >
-              I clicked the link →
-            </button>
 
             <p style={backLinkStyle} onClick={goToLogin}>← Back to login</p>
           </>
         )}
 
         {/* ============ FORGOT PASSWORD - STEP 3: SET NEW PASSWORD ============ */}
+        {/* NOTE: this view is only reachable directly here for local testing.
+            In production, real users land on a separate /reset-password page
+            after clicking the email link, which is where this same form
+            (and handleResetPassword logic) should live so a valid recovery
+            session exists. See note above handleResetPassword. */}
         {view === 'reset' && (
           <>
             <h2 style={titleStyle}>Set a new password</h2>
