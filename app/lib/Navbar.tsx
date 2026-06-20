@@ -45,7 +45,6 @@ export const Navbar = ({
   const [menuOpen, setMenuOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
 
-  // EN/JP — read from localStorage on mount
   const [activeLang, setActiveLang] = useState<'en' | 'ja'>(lang ?? 'en')
 
   useEffect(() => {
@@ -118,6 +117,38 @@ export const Navbar = ({
     window.location.href = '/'
   }
 
+  // Centralized "close everything else" helpers so any button tap collapses
+  // whatever else is currently open — search, bell, profile, menu.
+  const openMobileSearch = () => {
+    setShowMobileSearch(p => !p)
+    setBellOpen(false)
+    setProfileOpen(false)
+    setMenuOpen(false)
+  }
+  const openBell = () => {
+    setBellOpen(p => !p)
+    setProfileOpen(false)
+    setShowMobileSearch(false)
+    setMenuOpen(false)
+  }
+  const openProfile = () => {
+    setProfileOpen(p => !p)
+    setBellOpen(false)
+    setShowMobileSearch(false)
+    setMenuOpen(false)
+  }
+  const openMenu = () => {
+    setMenuOpen(p => !p)
+    setBellOpen(false)
+    setProfileOpen(false)
+    setShowMobileSearch(false)
+  }
+  const closeMobileSearch = () => {
+    setShowMobileSearch(false)
+    setSearchResults([])
+    setIsDropdownOpen(false)
+  }
+
   const DropdownResults = () => (
     <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, backgroundColor: '#141416', zIndex: 99999, borderRadius: '0 0 8px 8px', boxShadow: '0 8px 24px rgba(0,0,0,0.5)', border: '1px solid #333', borderTop: 'none', marginTop: '2px', overflow: 'hidden' }}>
       {searchResults.map((item: any) => {
@@ -161,7 +192,7 @@ export const Navbar = ({
         {/* Left: menu toggle + logo */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
           <button
-            onClick={() => setMenuOpen(p => !p)}
+            onClick={openMenu}
             style={{ background: 'none', border: 'none', color: 'white', fontSize: '22px', cursor: 'pointer', lineHeight: 1 }}
           >
             {menuOpen ? '✕' : '☰'}
@@ -171,23 +202,25 @@ export const Navbar = ({
           </a>
         </div>
 
-        {/* Center: search + extra buttons (desktop) */}
+        {/* Center: search (desktop only) + extra buttons */}
         {!hideWidgets && (
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '10px', justifyContent: 'center' }}>
-            {/* Search */}
-            <div ref={searchContainerRef} style={{ position: 'relative', display: 'flex', width: isMobile ? '100%' : '340px' }}>
-              <input
-                type="text" placeholder="Search anime..." value={search}
-                onChange={e => handleSearchChange(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && onSearch?.()}
-                onFocus={() => { setBellOpen(false); setProfileOpen(false); if (search.trim() && searchResults.length > 0) setIsDropdownOpen(true) }}
-                style={{ width: '100%', padding: '8px 16px', borderRadius: '20px 0 0 20px', border: `1px solid ${COLORS.primary}`, backgroundColor: CARD, color: 'white', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
-              />
-              <button onClick={onSearch} style={{ padding: '8px 16px', backgroundColor: COLORS.primary, border: 'none', borderRadius: '0 20px 20px 0', color: 'white', cursor: 'pointer', fontSize: '13px', fontWeight: 'bold', flexShrink: 0 }}>
-                Search
-              </button>
-              {isDropdownOpen && searchResults.length > 0 && <DropdownResults />}
-            </div>
+            {/* Search — desktop only. Mobile uses the icon + expandable bar instead. */}
+            {!isMobile && (
+              <div ref={searchContainerRef} style={{ position: 'relative', display: 'flex', width: '340px' }}>
+                <input
+                  type="text" placeholder="Search anime..." value={search}
+                  onChange={e => handleSearchChange(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && onSearch?.()}
+                  onFocus={() => { setBellOpen(false); setProfileOpen(false); if (search.trim() && searchResults.length > 0) setIsDropdownOpen(true) }}
+                  style={{ width: '100%', padding: '8px 16px', borderRadius: '20px 0 0 20px', border: `1px solid ${COLORS.primary}`, backgroundColor: CARD, color: 'white', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
+                />
+                <button onClick={onSearch} style={{ padding: '8px 16px', backgroundColor: COLORS.primary, border: 'none', borderRadius: '0 20px 20px 0', color: 'white', cursor: 'pointer', fontSize: '13px', fontWeight: 'bold', flexShrink: 0 }}>
+                  Search
+                </button>
+                {isDropdownOpen && searchResults.length > 0 && <DropdownResults />}
+              </div>
+            )}
 
             {/* Extra nav links — desktop only */}
             {!isMobile && (
@@ -200,6 +233,9 @@ export const Navbar = ({
                 </a>
               </>
             )}
+
+            {/* Mobile: just pushes remaining items to the right */}
+            {isMobile && <div style={{ flex: 1 }} />}
           </div>
         )}
 
@@ -209,13 +245,13 @@ export const Navbar = ({
           </div>
         )}
 
-        {/* Right: EN/JP + bell + profile */}
+        {/* Right: search icon (mobile) + EN/JP + bell + profile */}
         {!hideWidgets && (
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
 
             {/* Mobile search icon */}
             {isMobile && (
-              <button onClick={() => setShowMobileSearch(p => !p)} style={{ background: 'none', border: 'none', color: 'white', fontSize: '20px', cursor: 'pointer' }}>🔍</button>
+              <button onClick={openMobileSearch} style={{ background: 'none', border: 'none', color: showMobileSearch ? PINK : 'white', fontSize: '20px', cursor: 'pointer' }}>🔍</button>
             )}
 
             {/* EN/JP toggle — desktop only */}
@@ -235,7 +271,7 @@ export const Navbar = ({
 
             {/* Bell */}
             <div style={{ position: 'relative' }}>
-              <button onClick={() => { setBellOpen(p => !p); setProfileOpen(false) }} style={{ background: 'none', border: 'none', color: 'white', fontSize: '20px', cursor: 'pointer' }}>🔔</button>
+              <button onClick={openBell} style={{ background: 'none', border: 'none', color: 'white', fontSize: '20px', cursor: 'pointer' }}>🔔</button>
               {bellOpen && (
                 <div style={{ position: 'absolute', top: '44px', right: 0, backgroundColor: CARD, border: `1px solid ${COLORS.primary}`, borderRadius: '10px', width: '290px', zIndex: Z_INDEX.dropdown, overflow: 'hidden' }}>
                   <div style={{ display: 'flex', borderBottom: '1px solid #333' }}>
@@ -251,7 +287,7 @@ export const Navbar = ({
             {/* Profile or Login */}
             {isLoggedIn ? (
               <div style={{ position: 'relative' }}>
-                <button onClick={() => { setProfileOpen(p => !p); setBellOpen(false) }} style={{ width: '34px', height: '34px', borderRadius: '50%', backgroundColor: COLORS.primary, border: 'none', color: 'white', cursor: 'pointer', fontSize: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>👤</button>
+                <button onClick={openProfile} style={{ width: '34px', height: '34px', borderRadius: '50%', backgroundColor: COLORS.primary, border: 'none', color: 'white', cursor: 'pointer', fontSize: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>👤</button>
                 {profileOpen && (
                   <div style={{ position: 'absolute', top: '44px', right: 0, backgroundColor: CARD, border: `1px solid ${COLORS.primary}`, borderRadius: '10px', width: '190px', zIndex: Z_INDEX.dropdown, overflow: 'hidden' }}>
                     {PROFILE_MENU_ITEMS.map((item: any) => (
@@ -272,16 +308,18 @@ export const Navbar = ({
         )}
       </nav>
 
-      {/* Mobile search bar */}
+      {/* Mobile expandable search bar — tap search icon to open, X or any other navbar button closes it */}
       {showMobileSearch && isMobile && (
-        <div ref={mobileSearchRef} style={{ padding: '10px 16px', backgroundColor: DARK, position: 'relative' }}>
-          <div style={{ position: 'relative' }}>
+        <div ref={mobileSearchRef} style={{ padding: '10px 16px', backgroundColor: DARK, position: 'relative', borderBottom: `1px solid ${COLORS.primary}` }}>
+          <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: '8px' }}>
             <input
               type="text" placeholder="Search anime..." value={search}
+              autoFocus
               onChange={e => handleSearchChange(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && onSearch?.()}
-              style={{ width: '100%', padding: '10px 16px', borderRadius: '20px', border: `1px solid ${COLORS.primary}`, backgroundColor: CARD, color: 'white', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }}
+              style={{ flex: 1, padding: '10px 16px', borderRadius: '20px', border: `1px solid ${COLORS.primary}`, backgroundColor: CARD, color: 'white', fontSize: '14px', outline: 'none', boxSizing: 'border-box', minWidth: 0 }}
             />
+            <button onClick={closeMobileSearch} style={{ background: 'none', border: 'none', color: 'white', fontSize: '20px', cursor: 'pointer', flexShrink: 0, lineHeight: 1 }}>✕</button>
             {isDropdownOpen && searchResults.length > 0 && <DropdownResults />}
           </div>
         </div>
@@ -291,13 +329,11 @@ export const Navbar = ({
       {menuOpen && (
         <>
           <div style={{ position: 'fixed', top: 0, left: 0, height: '100vh', width: '240px', backgroundColor: DARK, zIndex: 10000, borderRight: `2px solid ${COLORS.primary}`, display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
-            {/* Sidebar header */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', borderBottom: `1px solid #1a1a2e` }}>
               <a href="/home" style={{ color: COLORS.primary, fontSize: '18px', fontWeight: 'bold', textDecoration: 'none' }}>⚔️ AniStream</a>
               <button onClick={() => setMenuOpen(false)} style={{ background: 'none', border: 'none', color: 'white', fontSize: '22px', cursor: 'pointer' }}>✕</button>
             </div>
 
-            {/* Search inside sidebar */}
             <div style={{ padding: '12px 16px', borderBottom: '1px solid #1a1a2e' }}>
               <div style={{ position: 'relative', display: 'flex' }}>
                 <input
@@ -310,7 +346,6 @@ export const Navbar = ({
               </div>
             </div>
 
-            {/* Nav items */}
             {SIDEBAR_ITEMS.map(item => (
               <a key={item.label} href={item.href}
                 onClick={() => setMenuOpen(false)}
@@ -320,7 +355,6 @@ export const Navbar = ({
               >{item.label}</a>
             ))}
           </div>
-          {/* Overlay */}
           <div onClick={() => setMenuOpen(false)} style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 9999 }} />
         </>
       )}
