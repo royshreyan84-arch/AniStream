@@ -248,12 +248,11 @@ export default function Home() {
           ))}
         </div>
       </div>
-
-      {/* MAIN LAYOUT */}
-      <div style={{ display: isMobile ? 'block' : 'grid', gridTemplateColumns: '1fr 290px', gap: 0, maxWidth: '1400px', margin: '0 auto' }}>
+      {/* MAIN LAYOUT — CSS-driven grid, no JS isMobile dependency for the structure itself */}
+      <div className="home-main-grid">
 
         {/* LEFT COLUMN */}
-        <div style={{ padding: isMobile ? '16px' : '24px 20px 24px 28px', minWidth: 0 }}>
+        <div className="home-left-col">
 
           {/* Trending */}
           <div style={{ marginBottom: '24px' }}>
@@ -361,39 +360,71 @@ export default function Home() {
             )}
           </div>
 
-          {/* Mobile Top 10 */}
-          {isMobile && (
-            <div style={{ marginBottom: '24px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-                <h3 style={{ fontSize: '16px', margin: 0, fontWeight: 700, color: PINK, borderLeft: `3px solid ${PINK}`, paddingLeft: '10px' }}>Top 10</h3>
-                <div style={{ display: 'flex', gap: '4px' }}>
-                  {['Today', 'Weekly', 'Monthly'].map(t => (
-                    <button key={t} onClick={() => setTop10Tab(t)} style={{ padding: '5px 10px', borderRadius: '5px', border: 'none', fontSize: '11px', cursor: 'pointer', backgroundColor: top10Tab === t ? PINK : '#1a1a2e', color: top10Tab === t ? 'white' : '#aaa', fontWeight: top10Tab === t ? 'bold' : 'normal' }}>{t}</button>
-                  ))}
-                </div>
+          {/* Mobile Top 10 — shown only under 768px via CSS class below */}
+          <div className="home-top10-mobile" style={{ marginBottom: '24px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+              <h3 style={{ fontSize: '16px', margin: 0, fontWeight: 700, color: PINK, borderLeft: `3px solid ${PINK}`, paddingLeft: '10px' }}>Top 10</h3>
+              <div style={{ display: 'flex', gap: '4px' }}>
+                {['Today', 'Weekly', 'Monthly'].map(t => (
+                  <button key={t} onClick={() => setTop10Tab(t)} style={{ padding: '5px 10px', borderRadius: '5px', border: 'none', fontSize: '11px', cursor: 'pointer', backgroundColor: top10Tab === t ? PINK : '#1a1a2e', color: top10Tab === t ? 'white' : '#aaa', fontWeight: top10Tab === t ? 'bold' : 'normal' }}>{t}</button>
+                ))}
               </div>
-              <Top10List />
             </div>
-          )}
+            <Top10List />
+          </div>
         </div>
 
-        {/* RIGHT COLUMN — desktop Top 10 */}
-        {!isMobile && (
-          <div style={{ padding: '24px 20px', borderLeft: `1px solid ${BORDER}` }}>
-            <div style={{ position: 'sticky', top: '70px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-                <h3 style={{ fontSize: '18px', margin: 0, fontWeight: 700, color: PINK, borderLeft: `3px solid ${PINK}`, paddingLeft: '10px' }}>Top 10</h3>
-                <div style={{ display: 'flex', gap: '3px' }}>
-                  {['Today', 'Week', 'Month'].map(t => (
-                    <button key={t} onClick={() => setTop10Tab(t)} style={{ padding: '5px 10px', borderRadius: '5px', border: 'none', fontSize: '11px', cursor: 'pointer', backgroundColor: top10Tab === t ? PINK : '#1a1a2e', color: top10Tab === t ? 'white' : '#aaa', fontWeight: top10Tab === t ? 'bold' : 'normal' }}>{t}</button>
-                  ))}
-                </div>
+        {/* RIGHT COLUMN — desktop Top 10, shown only at 768px+ via CSS class below */}
+        <div className="home-top10-desktop" style={{ padding: '24px 20px', borderLeft: `1px solid ${BORDER}` }}>
+          <div style={{ position: 'sticky', top: '70px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+              <h3 style={{ fontSize: '18px', margin: 0, fontWeight: 700, color: PINK, borderLeft: `3px solid ${PINK}`, paddingLeft: '10px' }}>Top 10</h3>
+              <div style={{ display: 'flex', gap: '3px' }}>
+                {['Today', 'Week', 'Month'].map(t => (
+                  <button key={t} onClick={() => setTop10Tab(t)} style={{ padding: '5px 10px', borderRadius: '5px', border: 'none', fontSize: '11px', cursor: 'pointer', backgroundColor: top10Tab === t ? PINK : '#1a1a2e', color: top10Tab === t ? 'white' : '#aaa', fontWeight: top10Tab === t ? 'bold' : 'normal' }}>{t}</button>
+                ))}
               </div>
-              <Top10List />
             </div>
+            <Top10List />
           </div>
-        )}
+        </div>
       </div>
+
+      {/* CSS-driven responsive layout — no JS timing issues, applied instantly by the browser */}
+      <style jsx>{`
+        .home-main-grid {
+          display: block;
+          max-width: 1400px;
+          margin: 0 auto;
+        }
+        .home-left-col {
+          padding: 16px;
+          min-width: 0;
+        }
+        .home-top10-mobile {
+          display: block;
+        }
+        .home-top10-desktop {
+          display: none;
+        }
+
+        @media (min-width: 768px) {
+          .home-main-grid {
+            display: grid;
+            grid-template-columns: 1fr 290px;
+            gap: 0;
+          }
+          .home-left-col {
+            padding: 24px 20px 24px 28px;
+          }
+          .home-top10-mobile {
+            display: none;
+          }
+          .home-top10-desktop {
+            display: block;
+          }
+        }
+      `}</style>
     </main>
   )
 }
