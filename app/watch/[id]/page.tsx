@@ -207,7 +207,9 @@ export default function WatchPage() {
   const fetchAnimeInfo = useCallback(async () => {
     try {
       setLoadingInfo(true)
-      const res = await fetch(`https://api.jikan.moe/v4/anime/${animeId}`)
+      const res = await fetch(`https://api.jikan.moe/v4/anime/${animeId}`,
+         {next:{ revalidate:3600}}
+      )
       const data = await res.json()
       setAnimeInfo(data.data)
       return data.data as AnimeInfo
@@ -273,7 +275,9 @@ export default function WatchPage() {
         }
         const genreId = genreMap[genre]
         if (genreId) {
-          const res = await fetch(`https://api.jikan.moe/v4/anime?genres=${genreId}&order_by=score&sort=desc&limit=12`)
+          const res = await fetch(`https://api.jikan.moe/v4/anime?genres=${genreId}&order_by=score&sort=desc&limit=12`,
+             {next:{ revalidate:3600}}
+          )
           const data = await res.json()
           recs = (data.data ?? [])
             .filter((a: any) => !watchedIds.has(String(a.mal_id)))
@@ -291,7 +295,9 @@ export default function WatchPage() {
 
       // Fallback: use Jikan recommendations endpoint
       if (recs.length < 4) {
-        const res = await fetch(`https://api.jikan.moe/v4/anime/${animeId}/recommendations`)
+        const res = await fetch(`https://api.jikan.moe/v4/anime/${animeId}/recommendations`,
+           {next:{ revalidate:3600}}
+        )
         const data = await res.json()
         const extra = (data.data ?? []).slice(0, 8).map((r: any) => ({
           mal_id: r.entry.mal_id,
@@ -314,7 +320,9 @@ export default function WatchPage() {
     try {
       const periodMap: Record<string, string> = { 'Today': 'day', 'Week': 'week', 'Month': 'month' }
       const period = periodMap[tab] ?? 'day'
-      const res = await fetch(`https://api.jikan.moe/v4/top/anime?filter=airing&limit=10`)
+      const res = await fetch(`https://api.jikan.moe/v4/top/anime?filter=airing&limit=10`, 
+        {next:{ revalidate:3600}}
+      )
       const data = await res.json()
       setTop10List(data.data ?? [])
     } catch (err) {
