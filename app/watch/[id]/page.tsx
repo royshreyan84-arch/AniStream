@@ -161,6 +161,7 @@ export default function WatchPage() {
   const [showWatchBell, setShowWatchBell] = useState(false)
   const [showWatchProfile, setShowWatchProfile] = useState(false)
   const [isWatchloggedIn, setIsWatchLoggedIn] = useState(false)
+  
 
   // Recommendations + Top10
   const [recommendations, setRecommendations] = useState<RecommendedAnime[]>([])
@@ -175,7 +176,7 @@ export default function WatchPage() {
   const [watchlistStatus, setWatchlistStatus] = useState<string | null>(null)
   const [showStatusMenu, setShowStatusMenu] = useState(false)
   const [vote, setVote] = useState<string | null>(null)
-
+  
   // Fix comment scroll jump — use ref for comment input
   const commentInputRef = useRef<HTMLInputElement>(null)
   const [comments, setComments] = useState<Comment[]>([
@@ -206,6 +207,7 @@ export default function WatchPage() {
 
   useEffect(() =>{
     setFallbackIndex(0)
+    setAnikotoError(false)
   }, [currentEp, animeId])
 
   useEffect(() =>{
@@ -244,6 +246,9 @@ export default function WatchPage() {
       const siteEps = await fetchAnikotoSeries(animeId)
       const totalEps = info.episodes || Math.max(timedEps.length, 12)
       const merged: Episode[] = Array.from({ length: totalEps }, (_, i) => {
+        setEpisodes(merged)
+        const hasAnyEmbed = merged.some(ep => ep.anikotoEmbedId)
+        setAnikotoError(!hasAnyEmbed)
         const n = i + 1
         const timed = timedEps.find(e => e.number === n)
         const site = siteEps.find(e => e.number === n)
@@ -469,7 +474,8 @@ export default function WatchPage() {
           </p>
         </div>
         {isReleased && (
-          <button onClick={() => switchEpisode(nextUnreleased.number)} style={{ backgroundColor: COLORS.pink, color: '#fff', border: 'none', borderRadius: '8px', padding: '8px 14px', cursor: 'pointer', fontWeight: 700, fontSize: '13px', flexShrink: 0 }}>Watch ▶</button>
+          <button
+           onClick={() => switchEpisode(nextUnreleased.number)} style={{ backgroundColor: COLORS.pink, color: '#fff', border: 'none', borderRadius: '8px', padding: '8px 14px', cursor: 'pointer', fontWeight: 700, fontSize: '13px', flexShrink: 0 }}>Watch ▶</button>
         )}
       </div>
     )
@@ -562,7 +568,16 @@ export default function WatchPage() {
         {anikotoError && (
           <div style={{ display: 'flex', gap: '6px' }}>
             <button onClick={() => setAnikotoError(false)} style={{ background: 'none', border: `1px solid ${COLORS.border}`, borderRadius: '6px', padding: '2px 8px', color: COLORS.primary, fontSize: '11px', cursor: 'pointer' }}>Retry Anikoto</button>
-            <button onClick={() => setFallbackIndex(i => (i + 1) % fallbackSources.length)} style={{ background: 'none', border: `1px solid ${COLORS.border}`, borderRadius: '6px', padding: '2px 8px', color: COLORS.muted, fontSize: '11px', cursor: 'pointer' }}>Try next source ({fallbackIndex + 1}/{fallbackSources.length})</button>
+            <button
+  onClick={() => setFallbackIndex(i => (i + 1) % fallbackSources.length)}
+  style={{
+    background: 'none', border: `1px solid ${COLORS.border}`,
+    borderRadius: '6px', padding: '4px 10px', color: COLORS.primary,
+    fontSize: '11px', cursor: 'pointer',
+  }}
+>
+  Try next source ({fallbackIndex + 1}/{fallbackSources.length})
+</button>
           </div>
         )}
       </div>
