@@ -193,7 +193,7 @@ export default function WatchPage() {
 
   const [fallbackIndex, setFallbackIndex] = useState(0)
   const fallbackSources = [
-    `https://vidsrc.to/embed/anime/${animeId}/${currentEp}`,
+    `https://vidsrc.ru/embed/anime/${animeId}/${currentEp}`,
     `https://anime.autoembed.cc/embed/anime?mal=${animeId}&episode=${currentEp}`,
     `https://vidsrc.xyz/embed/anime?mal=${animeId}&episode=${currentEp}`,
   ]
@@ -203,6 +203,20 @@ export default function WatchPage() {
     }
     return fallbackSources[fallbackIndex] ?? fallbackSources[0]
   })()
+
+  useEffect(() =>{
+    setFallbackIndex(0)
+  }, [currentEp, animeId])
+
+  useEffect(() =>{
+    if (anikotoError) {
+      const timer = setTimeout(() => {
+        setFallbackIndex(prev => (prev +1< fallbackSources.length?prev+1:prev))
+      }, 6000)
+      return() => clearTimeout(timer)
+    }
+  },[fallbackIndex, anikotoError]
+)
 
   const fetchAnimeInfo = useCallback(async () => {
     try {
