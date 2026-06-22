@@ -113,24 +113,58 @@ async function fetchAnikotoSeries(id: string | number): Promise<Array<{ number: 
 function useCountdown(targetMs: number | null) {
   const [timeLeft, setTimeLeft] = useState<string | null>(null)
   const [mounted, setMounted] = useState(false)
-  useEffect(() => { setMounted(true) }, [])
+
   useEffect(() => {
-    if (!mounted || !targetMs) { setTimeLeft(null); return }
+    setMounted(true)
+  }, [])
+
+  useEffect(() => {
+    if (!mounted || !targetMs) {
+      setTimeLeft(null)
+      return
+    }
+
     const tick = () => {
       const diff = targetMs - Date.now()
-      if (diff <= 0) { setTimeLeft('Released'); return }
+
+      if (diff <= 0) {
+        setTimeLeft('Released')
+        return
+      }
+
       const d = Math.floor(diff / 86_400_000)
       const h = Math.floor((diff % 86_400_000) / 3_600_000)
       const m = Math.floor((diff % 3_600_000) / 60_000)
       const s = Math.floor((diff % 60_000) / 1_000)
-      setTimeLeft(d > 0 ? `${d}d ${h}h ${m}m` : `${h}h ${m}m ${s}s`)
+
+      setTimeLeft(
+        d > 0
+          ? `${d}d ${h}h ${m}m`
+          : `${h}h ${m}m ${s}s`
+      )
     }
+
     tick()
-    const id = setInterval(tick, 1_000)
+
+    const id = setInterval(() => {
+      const diff = targetMs - Date.now()
+
+      if (diff <= 0) {
+        clearInterval(id)
+        setTimeLeft('Released')
+        return
+      }
+
+      tick()
+    }, 1000)
+
     return () => clearInterval(id)
   }, [targetMs, mounted])
+
   return timeLeft
 }
+  
+
 
 function useNow() {
   const [now, setNow] = useState<number>(0)
@@ -169,13 +203,18 @@ export default function WatchPage() {
   const [top10Tab, setTop10Tab] = useState('Today')
   const [loadingRec, setLoadingRec] = useState(false)
 
-  const [audioType, setAudioType] = useState<'sub' | 'dub'>(() => typeof window !== 'undefined' ? getAudioPref() : 'sub')
+  const [audioType, setAudioType] = useState<'sub' | 'dub'>(
+  () => (typeof window !== 'undefined' ? getAudioPref() : 'sub')
+)
   const [autoPlay, setAutoPlay] = useState(true)
   const [autoNext, setAutoNext] = useState(true)
   const [autoSkipIntro, setAutoSkipIntro] = useState(true)
   const [watchlistStatus, setWatchlistStatus] = useState<string | null>(null)
   const [showStatusMenu, setShowStatusMenu] = useState(false)
   const [vote, setVote] = useState<string | null>(null)
+  useEffect(() => {
+    saveAudioPref(audioType)
+  }, [audioType])
   
   // Fix comment scroll jump — use ref for comment input
   const commentInputRef = useRef<HTMLInputElement>(null)
@@ -204,21 +243,30 @@ export default function WatchPage() {
     }
     return fallbackSources[fallbackIndex] ?? fallbackSources[0]
   })()
+  useEffect(() => {
+    const name =getUsername()
+    if (name) setUsername(name)
+  }, [])
 
   useEffect(() =>{
     setFallbackIndex(0)
     setAnikotoError(false)
   }, [currentEp, animeId])
 
-  useEffect(() =>{
-    if (anikotoError) {
-      const timer = setTimeout(() => {
-        setFallbackIndex(prev => (prev +1< fallbackSources.length?prev+1:prev))
-      }, 6000)
-      return() => clearTimeout(timer)
-    }
-  },[fallbackIndex, anikotoError]
-)
+  
+
+  useEffect(() => {
+  if (!anikotoError) return
+
+  const timer = setTimeout(() => {
+    setFallbackIndex(prev =>
+      prev + 1 < fallbackSources.length ? prev + 1 : prev
+    )
+  }, 6000)
+
+  return () => clearTimeout(timer)
+}, [anikotoError])
+
 
   const fetchAnimeInfo = useCallback(async () => {
     try {
@@ -246,21 +294,35 @@ export default function WatchPage() {
       const siteEps = await fetchAnikotoSeries(animeId)
       const totalEps = info.episodes || Math.max(timedEps.length, 12)
       const merged: Episode[] = Array.from({ length: totalEps }, (_, i) => {
-        setEpisodes(merged);
-        const hasAnyEmbed = merged.some(ep => ep.anikotoEmbedId)
-        setAnikotoError(!hasAnyEmbed)
-        const n = i + 1
-        const timed = timedEps.find(e => e.number === n)
-        const site = siteEps.find(e => e.number === n)
-        const rawEmbed = audioType === 'dub' ? site?.embedDub : site?.embedSub
-        return {
-          id: `ep-${n}`, number: n,
-          title: timed?.title ?? `Episode ${n}`,
-          anikotoEmbedId: rawEmbed ? rawEmbed.split('/').pop() : undefined,
-          releasedAt: timed?.releasedAt ?? 0,
-        }
-      })
-      setEpisodes(merged)
+  const n = i + 1
+
+  const timed = timedEps.find(e => e.number === n)
+  const site = siteEps.find(e => e.number === n)
+
+  const rawEmbed =
+    audioType === 'dub'
+      ? site?.embedDub
+      : site?.embedSub
+
+  return {
+  id: `ep-${n}`,
+  number: n,
+  title: timed?.title ?? `Episode ${n}`,
+  anikotoEmbedId: rawEmbed
+    ? rawEmbed
+        .split('/')
+        .filter(Boolean)
+        .pop()
+    : undefined,
+  releasedAt: timed?.releasedAt ?? 0,
+}
+})
+
+setEpisodes(merged)
+
+const hasAnyEmbed = merged.some(ep => ep.anikotoEmbedId)
+setAnikotoError(!hasAnyEmbed)
+      
     } catch {
       const total = info.episodes || 12
       setEpisodes(Array.from({ length: Math.min(total, 200) }, (_, i) => ({
@@ -276,9 +338,9 @@ export default function WatchPage() {
     setLoadingRec(true)
     try {
       const genres = info.genres?.map(g => g.name) ?? []
-      const history = (() => {
-        try { return JSON.parse(localStorage.getItem('watchHistory') ?? '[]') } catch { return [] }
-      })()
+      const history = JSON.parse(
+  localStorage.getItem('watchHistory') ?? '[]'
+    )()
       const watchedIds = new Set([animeId, ...history.map((h: any) => String(h.id))])
 
       // Use first genre to find similar anime
@@ -350,7 +412,8 @@ export default function WatchPage() {
   }, [])
 
   useEffect(() => {
-    setIsWatchLoggedIn(localStorage.getItem('isLoggedIn') === 'true')
+    const username = getUsername()
+    setIsWatchLoggedIn(!!username)
     const checkMobile = () => setIsMobile(window.innerWidth < 1024)
     checkMobile()
     window.addEventListener('resize', checkMobile)
@@ -363,6 +426,12 @@ export default function WatchPage() {
     fetchTop10(top10Tab)
     return () => window.removeEventListener('resize', checkMobile)
   }, [animeId])
+
+  useEffect(() => {
+    if (animeInfo) {
+      fetchEpisodes(animeInfo)
+    }
+  }, [audioType])
 
   useEffect(() => { fetchTop10(top10Tab) }, [top10Tab])
 
@@ -450,6 +519,9 @@ export default function WatchPage() {
       <iframe
         key={playerUrl}
         src={playerUrl}
+        onLoad={() =>{
+          console.log("iframe loaded")
+        }}
         allowFullScreen
         referrerPolicy="no-referrer"
         style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 'none' }}
