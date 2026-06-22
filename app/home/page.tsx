@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { RecentComment } from '@/app/lib/types'
 import { Navbar } from '../lib/Navbar'
 import  Footer  from '@/app/lib/components/Footer';
+import { supabase } from "../lib/supabaseClient"
 
 const PINK = '#ff2475'
 const PURPLE = '#6c63ff'
@@ -42,12 +43,15 @@ export default function Home() {
   }, [])
 
   useEffect(() => {
-    setIsLoggedIn(localStorage.getItem('isLoggedIn') === 'true')
-    try {
-      const saved = localStorage.getItem('anistream_lang') as 'en' | 'ja' | null
-      if (saved === 'en' || saved === 'ja') setLang(saved)
-    } catch {}
-  }, [])
+  supabase.auth.getSession().then(({ data }) => {
+    setIsLoggedIn(!!data.session)
+  })
+
+  try {
+    const saved = localStorage.getItem('anistream_lang') as 'en' | 'ja' | null
+    if (saved === 'en' || saved === 'ja') setLang(saved)
+  } catch {}
+}, [])
 
   useEffect(() => {
     fetch('https://api.jikan.moe/v4/top/anime?filter=bypopularity&limit=20')
