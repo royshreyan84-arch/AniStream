@@ -287,6 +287,7 @@ export default function WatchPage() {
 
   const fetchEpisodes = useCallback(async (info: AnimeInfo) => {
     setLoadingEpisodes(true)
+     
     try {
       const pageId = await searchAnikotoSlug(info.title, info.title_english)
       let timedEps: Array<{ number: number; title: string; releasedAt: number }> = []
@@ -303,7 +304,7 @@ export default function WatchPage() {
     audioType === 'dub'
       ? site?.embedDub
       : site?.embedSub
-
+      console.log('episode', n, 'rawEmbed', rawEmbed)
   return {
   id: `ep-${n}`,
   number: n,
@@ -420,6 +421,7 @@ setAnikotoError(!hasAnyEmbed)
     fetchAnimeInfo().then(info => {
       if (info) {
         fetchEpisodes(info)
+        
         fetchRecommendations(info)
       }
     })
@@ -430,6 +432,7 @@ setAnikotoError(!hasAnyEmbed)
   useEffect(() => {
     if (animeInfo) {
       fetchEpisodes(animeInfo)
+     
     }
   }, [audioType])
 
