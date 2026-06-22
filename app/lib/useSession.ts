@@ -69,6 +69,7 @@ export function useSession(options: UseSessionOptions = {}) {
     const onActivity = () => refreshSessionActivity()
     window.addEventListener('click', onActivity)
     window.addEventListener('keydown', onActivity)
+    window.addEventListener('touchstart', onActivity)
 
     return () => {
       listener.subscription.unsubscribe()

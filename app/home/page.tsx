@@ -50,12 +50,12 @@ export default function Home() {
   }, [])
 
   useEffect(() => {
-    fetch('https://api.jikan.moe/v4/top/anime?limit=20')
+    fetch('https://api.jikan.moe/v4/top/anime?filter=bypopularity&limit=20')
       .then(r => r.json())
       .then(data => { setAnimeList(data.data ?? []); setFeatured(data.data?.[0] ?? null) })
       .catch(() => { setAnimeList([]); setFeatured(null) })
 
-    fetch('https://api.jikan.moe/v4/top/anime?limit=10')
+    fetch('https://api.jikan.moe/v4/top/anime?filter=airing&limit=10')
       .then(r => r.json())
       .then(data => setTrendingList(data.data ?? []))
       .catch(() => setTrendingList([]))

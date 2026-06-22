@@ -71,12 +71,27 @@ export function saveUsername(name: string) {
 export function getUsername(): string {
   return getCookie('username') ?? (typeof localStorage !== 'undefined' ? localStorage.getItem('username') : null) ?? 'Guest'
 }
-
+export function saveRememberMe (enabled: boolean) {
+  setCookie(
+    'remember_me',
+    enabled ?'true':'false',
+    COOKIE_DEFAULTS.PREFS_MAX_AGE
+  )
+}
+export function getRememberMe(): boolean {
+  return getCookie ('remember_me')==='true'
+}
 // ── Session activity tracking ─────────────────────────────────────────────────
 
 /** Call this on any user interaction to refresh the inactivity timer */
 export function refreshSessionActivity() {
-  setCookie('last_active', Date.now().toString(), COOKIE_DEFAULTS.SESSION_MAX_AGE)
+  const rememberMe = getRememberMe()
+
+  const maxAge = rememberMe
+  ?COOKIE_DEFAULTS.PREFS_MAX_AGE  //30days
+  :COOKIE_DEFAULTS.SESSION_MAX_AGE //7days
+
+  setCookie('last_active',Date.now().toString(),maxAge)
 }
 
 /**
@@ -85,9 +100,14 @@ export function refreshSessionActivity() {
  */
 export function isSessionExpired(): boolean {
   const lastActive = getCookie('last_active')
-  if (!lastActive) return false // first visit, don't force logout
-  const elapsed = Date.now() - parseInt(lastActive, 10)
-  return elapsed > COOKIE_DEFAULTS.SESSION_MAX_AGE * 1000
+  if (!lastActive) return false  // first visit, don't force logout
+  const rememberMe = getRememberMe()
+
+  const timeout = rememberMe
+   ?COOKIE_DEFAULTS.PREFS_MAX_AGE
+   :COOKIE_DEFAULTS.SESSION_MAX_AGE 
+   const elapsed = Date.now() - parseInt(lastActive, 10)
+   return elapsed > timeout * 1000
 }
 
 /** Clear all session cookies (call on logout) */

@@ -1,6 +1,8 @@
 'use client'
 import { useState, type CSSProperties } from 'react'
 import { supabase } from '@/app/lib/supabaseClient'
+import { saveRememberMe } from '../lib/cookies'
+
 
 type View = 'auth' | 'forgot' | 'sent' | 'reset'
 
@@ -41,9 +43,8 @@ export default function Login() {
         if (error) { setAuthError(error.message); return }
         const u = data.user
         const resolvedUsername = u?.user_metadata?.username || u?.email?.split('@')[0] || email
-        localStorage.setItem('isLoggedIn', 'true')
-        localStorage.setItem('username', resolvedUsername)
-        if (rememberMe) localStorage.setItem('rememberMe', 'true')
+        saveRememberMe(rememberMe)
+       
         window.location.href = '/home'
       } else {
         const { data, error } = await supabase.auth.signUp({

@@ -246,7 +246,7 @@ export default function WatchPage() {
       const siteEps = await fetchAnikotoSeries(animeId)
       const totalEps = info.episodes || Math.max(timedEps.length, 12)
       const merged: Episode[] = Array.from({ length: totalEps }, (_, i) => {
-        setEpisodes(merged)
+        setEpisodes(merged);
         const hasAnyEmbed = merged.some(ep => ep.anikotoEmbedId)
         setAnikotoError(!hasAnyEmbed)
         const n = i + 1
