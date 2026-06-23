@@ -34,6 +34,7 @@ interface Comment {
 }
 
 interface AnimeInfo {
+  mal_id?: number
   title: string
   title_english?: string
   synopsis: string
@@ -88,7 +89,12 @@ async function fetchAnikotoEpisodes(pageId: string): Promise<Array<{ number: num
     const res = await fetch(`/api/anikoto/episodes?id=${encodeURIComponent(pageId)}`)
     if (!res.ok) return []
     const data = await res.json()
-    const eps: any[] = Array.isArray(data) ? data : data?.episodes ?? []
+    const eps: any[] = Array.isArray(data?.data?.episodes)
+    ? data.data.episodes
+    : []
+    console.log("EPS COUNT:", eps.length)
+    console.log("FIRST EP:", eps[0])
+   
     return eps.map((ep: any, i: number) => ({
       number: ep.number ?? ep.ep ?? i + 1,
       title: ep.title ?? ep.name ?? `Episode ${i + 1}`,
@@ -99,10 +105,18 @@ async function fetchAnikotoEpisodes(pageId: string): Promise<Array<{ number: num
 
 async function fetchAnikotoSeries(id: string | number): Promise<Array<{ number: number; embedSub?: string; embedDub?: string }>> {
   try {
+    console.log("ANIME ID SENT:", id)
     const res = await fetch(`/api/anikoto/series?id=${id}`)
+    console.log("FETCH SERIES START")
     if (!res.ok) return []
     const data = await res.json()
-    const eps: any[] = Array.isArray(data?.episodes) ? data.episodes : []
+    console.log("SERIES DATA:", JSON.stringify(data, null, 2))
+    console.log("SERIES DATA:", data)
+    const eps: any[] = Array.isArray(data?.data?.episodes)
+     ? data.data.episodes
+     : []
+     console.log("EPS LENGTH:", eps.length)
+     console.log("FIRST SERIES EP:", eps[0])
     return eps.map((ep: any) => ({
       number: ep.number ?? ep.ep ?? 0,
       embedSub: ep.embed_url?.sub ?? undefined,
@@ -233,17 +247,22 @@ export default function WatchPage() {
   const countdown = useCountdown(nextUnreleased?.releasedAt ?? null)
 
   const [fallbackIndex, setFallbackIndex] = useState(0)
-  const fallbackSources = [
-    `https://vidsrc-embed.su/embed/anime/${animeId}/${currentEp}`,
-    `https://vidsrcme.ru/embed/anime?mal=${animeId}&episode=${currentEp}`,
-    `https://vidsrc.su/embed/anime?mal=${animeId}&episode=${currentEp}`,
-  ]
+  const malId = animeInfo?.mal_id?? animeId
+
+const fallbackSources = [
+  `https://megaplay.buzz/stream/ani/${animeId}/${currentEp}/${audioType}`,
+  `https://vidlink.pro/anime/${animeId}/${currentEp}/${audioType}?fallback=true`,
+  `https://vidsrcme.ru/embed/anime?mal=${animeId}&episode=${currentEp}`,
+]
   const playerUrl = (() => {
     if (!anikotoError && currentEpObj?.anikotoEmbedId) {
       return `https://megaplay.buzz/stream/s-2/${currentEpObj.anikotoEmbedId}/${audioType}`
     }
     return fallbackSources[fallbackIndex] ?? fallbackSources[0]
   })()
+  console.log("CURRENT EP OBJ:", currentEpObj)
+console.log("EMBED ID:", currentEpObj?.anikotoEmbedId)
+console.log("PLAYER URL:", playerUrl)
   useEffect(() => {
     const name =getUsername()
     if (name) setUsername(name)
@@ -276,7 +295,10 @@ export default function WatchPage() {
          {next:{ revalidate:3600}}
       )
       const data = await res.json()
+      console.log("ANIME INFO:", data.data)
+      console.log("MAL ID:", data.data.mal_id)
       setAnimeInfo(data.data)
+      
       return data.data as AnimeInfo
     } catch (err) {
       console.error('Jikan fetch failed:', err)
@@ -294,6 +316,9 @@ export default function WatchPage() {
       let timedEps: Array<{ number: number; title: string; releasedAt: number }> = []
       if (pageId) timedEps = await fetchAnikotoEpisodes(pageId)
       const siteEps = await fetchAnikotoSeries(animeId)
+    console.log("PAGE ID:", pageId)
+    console.log("SITE EPS:", siteEps)
+    console.log("FIRST SITE EP:", siteEps[0])
       const totalEps = info.episodes || Math.max(timedEps.length, 12)
       const merged: Episode[] = Array.from({ length: totalEps }, (_, i) => {
   const n = i + 1
@@ -301,20 +326,24 @@ export default function WatchPage() {
   const timed = timedEps.find(e => e.number === n)
   const site = siteEps.find(e => e.number === n)
 
-  const rawEmbed =
-    audioType === 'dub'
-      ? site?.embedDub
-      : site?.embedSub
+  const rawEmbed = 
+  
+  audioType === 'dub'
+  ?site?.embedDub
+  :site?.embedSub
+  console.log("SITE:", site)
+  console.log("RAW EMBED:", rawEmbed)
       console.log('episode', n, 'rawEmbed', rawEmbed)
+      const parts = rawEmbed?.split('/').filter(Boolean)
   return {
   id: `ep-${n}`,
   number: n,
   title: timed?.title ?? `Episode ${n}`,
-  anikotoEmbedId: rawEmbed
-    ? rawEmbed
-        .split('/')
-        .filter(Boolean)
-        .pop()
+  
+
+anikotoEmbedId :
+  parts && parts.length >= 2
+    ? parts[parts.length - 2]
     : undefined,
   releasedAt: timed?.releasedAt ?? 0,
 }

@@ -25,7 +25,9 @@ export async function GET(req: NextRequest) {
       { next: { revalidate: 1800 } },
     )
     const data = await safeJson(res)
+    console.log("EPISODE SAMPLE:", data?.data?.episodes?.[0])
     if (!res.ok || data === null) return NextResponse.json({ episodes: [] }, { status: 200 })
+      console.log("ANIKOTO RAW:", data)
     return NextResponse.json(data)
   } catch (err) {
     // Covers DNS failures (ENOTFOUND), network blocks, timeouts, etc.
