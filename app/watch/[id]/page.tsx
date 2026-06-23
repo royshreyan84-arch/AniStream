@@ -235,7 +235,7 @@ export default function WatchPage() {
   const [fallbackIndex, setFallbackIndex] = useState(0)
   const fallbackSources = [
     `https://vidsrc-embed.su/embed/anime/${animeId}/${currentEp}`,
-    `https://anime.autoembed.cc/embed/anime?mal=${animeId}&episode=${currentEp}`,
+    `https://vidsrcme.ru/embed/anime?mal=${animeId}&episode=${currentEp}`,
     `https://vidsrc.su/embed/anime?mal=${animeId}&episode=${currentEp}`,
   ]
   const playerUrl = (() => {
