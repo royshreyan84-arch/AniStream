@@ -4,6 +4,7 @@ import { supabase } from '@/app/lib/supabaseClient'
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Footer from '@/app/lib/components/Footer'
+import { saveWatchHistory, getWatchHistory } from '@/app/lib/watchHistory'
 
 const COLORS = {
   primary: '#6c63ff',
@@ -235,7 +236,7 @@ export default function WatchPage() {
   const fallbackSources = [
     `https://vidsrc-embed.su/embed/anime/${animeId}/${currentEp}`,
     `https://anime.autoembed.cc/embed/anime?mal=${animeId}&episode=${currentEp}`,
-    `https://vidsrc.xyz/embed/anime?mal=${animeId}&episode=${currentEp}`,
+    `https://vidsrc.su/embed/anime?mal=${animeId}&episode=${currentEp}`,
   ]
   const playerUrl = (() => {
     if (!anikotoError && currentEpObj?.anikotoEmbedId) {
@@ -339,9 +340,7 @@ setAnikotoError(!hasAnyEmbed)
     setLoadingRec(true)
     try {
       const genres = info.genres?.map(g => g.name) ?? []
-      const history = JSON.parse(
-  localStorage.getItem('watchHistory') ?? '[]'
-    )()
+     const history = await getWatchHistory()
       const watchedIds = new Set([animeId, ...history.map((h: any) => String(h.id))])
 
       // Use first genre to find similar anime
@@ -421,7 +420,7 @@ setAnikotoError(!hasAnyEmbed)
     fetchAnimeInfo().then(info => {
       if (info) {
         fetchEpisodes(info)
-        
+        saveWatchHistory(animeId)
         fetchRecommendations(info)
       }
     })
@@ -503,6 +502,7 @@ setAnikotoError(!hasAnyEmbed)
     setCurrentEp(epNum)
     setAnikotoError(false)
     saveLastEpisode(animeId, epNum)
+    saveWatchHistory(animeId)
     refreshSessionActivity()
   }
 
