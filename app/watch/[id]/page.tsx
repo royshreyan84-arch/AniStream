@@ -317,56 +317,63 @@ const fallbackSources = useMemo(() => [
   }, [animeId])
 
   const fetchEpisodes = useCallback(async (info: AnimeInfo) => {
-    setLoadingEpisodes(true)
-     
-    try {
-      const pageId = await searchAnikotoSlug(info.title, info.title_english)
-      let timedEps: Array<{ number: number; title: string; releasedAt: number }> = []
-      if (pageId) timedEps = await fetchAnikotoEpisodes(pageId)
-      const siteEps = await fetchAnikotoSeries(animeId)
-    
-      const totalEps = info.episodes || Math.max(timedEps.length, 12)
-      const merged: Episode[] = Array.from({ length: totalEps }, (_, i) => {
-  const n = i + 1
+  setLoadingEpisodes(true)
+  try {
+    const pageId = await searchAnikotoSlug(info.title, info.title_english)
+    let timedEps: Array<{ number: number; title: string; releasedAt: number }> = []
+    if (pageId) timedEps = await fetchAnikotoEpisodes(pageId)
+    const siteEps = await fetchAnikotoSeries(animeId)
 
-  const timed = timedEps.find(e => e.number === n)
-  const site = siteEps.find(e => e.number === n)
-
-  const rawEmbed = 
-  
-  audioType === 'dub'
-  ?site?.embedDub
-  :site?.embedSub
-  
-      const parts = rawEmbed?.split('/').filter(Boolean)
-  return {
-  id: `ep-${n}`,
-  number: n,
-  title: timed?.title ?? `Episode ${n}`,
-  
-
-anikotoEmbedId :
-  parts && parts.length >= 2
-    ? parts[parts.length - 2]
-    : undefined,
-  releasedAt: timed?.releasedAt ?? 0,
-}
-})
-
-setEpisodes(merged)
-
-const hasAnyEmbed = merged.some(ep => ep.anikotoEmbedId)
-setAnikotoError(!hasAnyEmbed)
-      
-    } catch {
-      const total = info.episodes || 12
-      setEpisodes(Array.from({ length: Math.min(total, 200) }, (_, i) => ({
-        id: `ep-${i + 1}`, number: i + 1, title: `Episode ${i + 1}`,
-      })))
-    } finally {
-      setLoadingEpisodes(false)
+    let totalEps = 0
+    if (info.episodes && info.episodes > 0) {
+      totalEps = info.episodes
+    } else {
+      try {
+        const epRes = await fetch(
+          `https://api.jikan.moe/v4/anime/${animeId}/episodes`,
+          { next: { revalidate: 1800 } }
+        )
+        const epData = await epRes.json()
+        const lastPage = epData?.pagination?.last_visible_page ?? 1
+        const hasNext = epData?.pagination?.has_next_page ?? false
+        const episodesOnLastPage = epData?.data?.length ?? 0
+        totalEps = hasNext
+          ? lastPage * 100
+          : (lastPage - 1) * 100 + episodesOnLastPage
+      } catch {
+        totalEps = Math.max(timedEps.length, siteEps.length, 12)
+      }
+      totalEps = Math.max(totalEps, timedEps.length, siteEps.length, 12)
     }
-  }, [animeId, audioType])
+
+    const merged: Episode[] = Array.from({ length: totalEps }, (_, i) => {
+      const n = i + 1
+      const timed = timedEps.find(e => e.number === n)
+      const site = siteEps.find(e => e.number === n)
+      const rawEmbed = audioType === 'dub' ? site?.embedDub : site?.embedSub
+      const parts = rawEmbed?.split('/').filter(Boolean)
+      return {
+        id: `ep-${n}`,
+        number: n,
+        title: timed?.title ?? `Episode ${n}`,
+        anikotoEmbedId: parts && parts.length >= 2 ? parts[parts.length - 2] : undefined,
+        releasedAt: timed?.releasedAt ?? 0,
+      }
+    })
+
+    setEpisodes(merged)
+    const hasAnyEmbed = merged.some(ep => ep.anikotoEmbedId)
+    setAnikotoError(!hasAnyEmbed)
+
+  } catch {
+    const total = info.episodes || 12
+    setEpisodes(Array.from({ length: Math.min(total, 1500) }, (_, i) => ({
+      id: `ep-${i + 1}`, number: i + 1, title: `Episode ${i + 1}`,
+    })))
+  } finally {
+    setLoadingEpisodes(false)
+  }
+}, [animeId, audioType])
 
   // Fetch recommendations based on genres + watch history
   const fetchRecommendations = useCallback(async (info: AnimeInfo) => {
