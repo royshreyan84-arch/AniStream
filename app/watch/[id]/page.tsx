@@ -5,6 +5,7 @@ import { useState, useEffect, useCallback, useRef, useMemo, memo } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Footer from '@/app/lib/components/Footer'
 import { saveWatchHistory, getWatchHistory } from '@/app/lib/watchHistory'
+import { match } from 'assert'
 
 const COLORS = {
   primary: '#6c63ff',
@@ -187,10 +188,11 @@ function useNow() {
   }, [])
   return now
 }
-const VideoPlayer = memo(({ playerUrl }: { playerUrl: string }) => (
+const VideoPlayer = memo(({ playerUrl, onError }: { playerUrl: string; onError: () => void }) => (
   <div style={{ backgroundColor: '#000', borderRadius: '12px', overflow: 'hidden', position: 'relative', paddingTop: '56.25%', marginBottom: '10px' }}>
     <iframe
       src={playerUrl}
+      onError={onError}
       allowFullScreen
       referrerPolicy="no-referrer"
       style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 'none' }}
@@ -220,6 +222,8 @@ export default function WatchPage() {
   const [isWatchloggedIn, setIsWatchLoggedIn] = useState(false)
   const [anilistId, setAnilistId]=useState<number|null>(null)
   const [menuOpen, setMenuOpen]=useState(false)
+  const [episodeChunk, setEpisodeChunk] = useState(0)
+  const [totalAiredEps, setTotalAiredEps] = useState(0)
   
 
   // Recommendations + Top10
@@ -266,11 +270,8 @@ const fallbackSources = useMemo(() => [
 ].filter(Boolean) as string[], [anilistId, currentEp, audioType, animeId])
 
   const playerUrl = useMemo(() => {
-  if (!anikotoError && currentEpObj?.anikotoEmbedId) {
-    return `https://megaplay.buzz/stream/s-2/${currentEpObj.anikotoEmbedId}/${audioType}`
-  }
-  return fallbackSources[fallbackIndex] ?? fallbackSources[0]
-}, [anikotoError, currentEpObj?.anikotoEmbedId, audioType, fallbackSources, fallbackIndex])
+  return fallbackSources[fallbackIndex]??fallbackSources[0]
+  }, [fallbackSources, fallbackIndex])
   
   useEffect(() => {
     const name =getUsername()
@@ -316,7 +317,7 @@ const fallbackSources = useMemo(() => [
     }
   }, [animeId])
 
-  const fetchEpisodes = useCallback(async (info: AnimeInfo) => {
+const fetchEpisodes = useCallback(async (info: AnimeInfo) => {
   setLoadingEpisodes(true)
   try {
     const pageId = await searchAnikotoSlug(info.title, info.title_english)
@@ -325,26 +326,41 @@ const fallbackSources = useMemo(() => [
     const siteEps = await fetchAnikotoSeries(animeId)
 
     let totalEps = 0
+
     if (info.episodes && info.episodes > 0) {
       totalEps = info.episodes
     } else {
       try {
-        const epRes = await fetch(
-          `https://api.jikan.moe/v4/anime/${animeId}/episodes`,
+        // Call 1: get pagination info
+        const firstRes = await fetch(
+          `https://api.jikan.moe/v4/anime/${animeId}/episodes?page=1`,
           { next: { revalidate: 1800 } }
         )
-        const epData = await epRes.json()
-        const lastPage = epData?.pagination?.last_visible_page ?? 1
-        const hasNext = epData?.pagination?.has_next_page ?? false
-        const episodesOnLastPage = epData?.data?.length ?? 0
-        totalEps = hasNext
-          ? lastPage * 100
-          : (lastPage - 1) * 100 + episodesOnLastPage
+        const firstData = await firstRes.json()
+        const lastPage = firstData?.pagination?.last_visible_page ?? 1
+        const hasNext = firstData?.pagination?.has_next_page ?? false
+
+        if (!hasNext) {
+          totalEps = firstData?.data?.length ?? 12
+        } else {
+          // Call 2: get last page to find exact latest episode
+          const lastRes = await fetch(
+            `https://api.jikan.moe/v4/anime/${animeId}/episodes?page=${lastPage}`,
+            { next: { revalidate: 1800 } }
+          )
+          const lastData = await lastRes.json()
+          const lastEps = lastData?.data ?? []
+          totalEps = lastEps.length > 0
+            ? lastEps[lastEps.length - 1].mal_id
+            : (lastPage - 1) * 100
+        }
       } catch {
         totalEps = Math.max(timedEps.length, siteEps.length, 12)
       }
       totalEps = Math.max(totalEps, timedEps.length, siteEps.length, 12)
     }
+
+    setTotalAiredEps(totalEps)
 
     const merged: Episode[] = Array.from({ length: totalEps }, (_, i) => {
       const n = i + 1
@@ -363,7 +379,7 @@ const fallbackSources = useMemo(() => [
 
     setEpisodes(merged)
     const hasAnyEmbed = merged.some(ep => ep.anikotoEmbedId)
-    setAnikotoError(!hasAnyEmbed)
+    setAnikotoError(true)
 
   } catch {
     const total = info.episodes || 12
@@ -547,6 +563,7 @@ const fallbackSources = useMemo(() => [
     saveLastEpisode(animeId, epNum)
     saveWatchHistory(animeId)
     refreshSessionActivity()
+    setEpisodeChunk(Math.floor((epNum-1)/100))
   }
 
   if (loadingInfo) {
@@ -584,7 +601,16 @@ const fallbackSources = useMemo(() => [
     )
   }
 
-  const EpisodeList = () => (
+ const EpisodeList = () => {
+  const CHUNK_SIZE = 100
+  const totalChunks = Math.ceil((totalAiredEps || episodes.length) / CHUNK_SIZE)
+  const chunkStart = episodeChunk * CHUNK_SIZE + 1
+  const chunkEnd = Math.min((episodeChunk + 1) * CHUNK_SIZE, totalAiredEps || episodes.length)
+  const visibleEpisodes = filteredEpisodes.filter(ep =>
+    ep.number >= chunkStart && ep.number <= chunkEnd
+  )
+
+  return (
     <div style={{ backgroundColor: COLORS.card, borderRadius: '12px', border: `1px solid ${COLORS.border}`, overflow: 'hidden' }}>
       <div style={{ padding: '14px 16px', borderBottom: `1px solid ${COLORS.border}` }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
@@ -593,6 +619,28 @@ const fallbackSources = useMemo(() => [
             {loadingEpisodes && <span style={{ color: COLORS.muted, fontWeight: 400, fontSize: '11px' }}>fetching...</span>}
           </h2>
         </div>
+
+        {/* Chunk selector */}
+        {totalChunks > 1 && (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '10px' }}>
+            {Array.from({ length: totalChunks }, (_, i) => {
+              const start = i * CHUNK_SIZE + 1
+              const end = Math.min((i + 1) * CHUNK_SIZE, totalAiredEps || episodes.length)
+              return (
+                <button key={i} onClick={() => setEpisodeChunk(i)}
+                  style={{
+                    padding: '4px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: 600,
+                    border: `1px solid ${episodeChunk === i ? COLORS.pink : COLORS.border}`,
+                    backgroundColor: episodeChunk === i ? '#3a1530' : COLORS.cardHover,
+                    color: episodeChunk === i ? COLORS.pink : COLORS.muted,
+                    cursor: 'pointer', whiteSpace: 'nowrap',
+                  }}
+                >{start}-{end}</button>
+              )
+            })}
+          </div>
+        )}
+
         <input
           value={episodeSearch}
           onChange={e => setEpisodeSearch(e.target.value)}
@@ -601,7 +649,7 @@ const fallbackSources = useMemo(() => [
         />
       </div>
       <div style={{ maxHeight: isMobile ? '60vh' : '70vh', overflowY: 'auto' }}>
-        {filteredEpisodes.map(ep => {
+        {visibleEpisodes.map(ep => {
           const isActive = currentEp === ep.number
           const isUnreleased = now > 0 && ep.releasedAt ? ep.releasedAt > now : false
           return (
@@ -617,6 +665,7 @@ const fallbackSources = useMemo(() => [
       </div>
     </div>
   )
+}
 
   const ToggleChip = ({ label, value, onToggle }: { label: string; value: boolean; onToggle: () => void }) => (
     <button onClick={onToggle} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'none', border: 'none', cursor: 'pointer', color: COLORS.muted, fontSize: '12px', padding: '4px 0', whiteSpace: 'nowrap' }}>
@@ -932,7 +981,7 @@ const fallbackSources = useMemo(() => [
       {isMobile ? (
         // ── MOBILE LAYOUT ──────────────────────────────────────────────────────
         <div style={{ padding: '12px' }}>
-          <VideoPlayer playerUrl={playerUrl} />
+          <VideoPlayer playerUrl={playerUrl} onError={() => setAnikotoError(true)} />
           <ControlsBar mobile />
           <div style={{ textAlign: 'center', marginBottom: '14px' }}>
             <p style={{ color: COLORS.muted, fontSize: '13px', margin: '0 0 4px' }}>You are watching</p>
@@ -954,7 +1003,7 @@ const fallbackSources = useMemo(() => [
 
           {/* Center: Player + Controls + Comments */}
           <div>
-            <VideoPlayer playerUrl={playerUrl} />
+            <VideoPlayer playerUrl={playerUrl} onError={() => setAnikotoError(true)} />
             <ControlsBar />
             <ServerSelector />
             <NextEpisodeCountdown />
