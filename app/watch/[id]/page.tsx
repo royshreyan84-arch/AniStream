@@ -1,7 +1,7 @@
 'use client'
 import {getAudioPref,saveAudioPref, getLastEpisode, saveLastEpisode, getUsername, refreshSessionActivity} from '@/app/lib/cookies'
 import { supabase } from '@/app/lib/supabaseClient'
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo, memo } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Footer from '@/app/lib/components/Footer'
 import { saveWatchHistory, getWatchHistory } from '@/app/lib/watchHistory'
@@ -92,8 +92,7 @@ async function fetchAnikotoEpisodes(pageId: string): Promise<Array<{ number: num
     const eps: any[] = Array.isArray(data?.data?.episodes)
     ? data.data.episodes
     : []
-    console.log("EPS COUNT:", eps.length)
-    console.log("FIRST EP:", eps[0])
+    
    
     return eps.map((ep: any, i: number) => ({
       number: ep.number ?? ep.ep ?? i + 1,
@@ -105,18 +104,16 @@ async function fetchAnikotoEpisodes(pageId: string): Promise<Array<{ number: num
 
 async function fetchAnikotoSeries(id: string | number): Promise<Array<{ number: number; embedSub?: string; embedDub?: string }>> {
   try {
-    console.log("ANIME ID SENT:", id)
+    
     const res = await fetch(`/api/anikoto/series?id=${id}`)
-    console.log("FETCH SERIES START")
+    
     if (!res.ok) return []
     const data = await res.json()
-    console.log("SERIES DATA:", JSON.stringify(data, null, 2))
-    console.log("SERIES DATA:", data)
+    
     const eps: any[] = Array.isArray(data?.data?.episodes)
      ? data.data.episodes
      : []
-     console.log("EPS LENGTH:", eps.length)
-     console.log("FIRST SERIES EP:", eps[0])
+     
     return eps.map((ep: any) => ({
       number: ep.number ?? ep.ep ?? 0,
       embedSub: ep.embed_url?.sub ?? undefined,
@@ -190,6 +187,17 @@ function useNow() {
   }, [])
   return now
 }
+const VideoPlayer = memo(({ playerUrl }: { playerUrl: string }) => (
+  <div style={{ backgroundColor: '#000', borderRadius: '12px', overflow: 'hidden', position: 'relative', paddingTop: '56.25%', marginBottom: '10px' }}>
+    <iframe
+      src={playerUrl}
+      allowFullScreen
+      referrerPolicy="no-referrer"
+      style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 'none' }}
+      allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
+    />
+  </div>
+))
 
 export default function WatchPage() {
   const params = useParams()
@@ -210,6 +218,8 @@ export default function WatchPage() {
   const [showWatchBell, setShowWatchBell] = useState(false)
   const [showWatchProfile, setShowWatchProfile] = useState(false)
   const [isWatchloggedIn, setIsWatchLoggedIn] = useState(false)
+  const [anilistId, setAnilistId]=useState<number|null>(null)
+  const [menuOpen, setMenuOpen]=useState(false)
   
 
   // Recommendations + Top10
@@ -249,20 +259,19 @@ export default function WatchPage() {
   const [fallbackIndex, setFallbackIndex] = useState(0)
   const malId = animeInfo?.mal_id?? animeId
 
-const fallbackSources = [
-  `https://megaplay.buzz/stream/ani/${animeId}/${currentEp}/${audioType}`,
-  `https://vidlink.pro/anime/${animeId}/${currentEp}/${audioType}?fallback=true`,
+const fallbackSources = useMemo(() => [
+  anilistId ? `https://vidnest.fun/animepahe/${anilistId}/${currentEp}/${audioType}` : null,
+  anilistId ? `https://vidnest.fun/anime/${anilistId}/${currentEp}/${audioType}` : null,
   `https://vidsrcme.ru/embed/anime?mal=${animeId}&episode=${currentEp}`,
-]
-  const playerUrl = (() => {
-    if (!anikotoError && currentEpObj?.anikotoEmbedId) {
-      return `https://megaplay.buzz/stream/s-2/${currentEpObj.anikotoEmbedId}/${audioType}`
-    }
-    return fallbackSources[fallbackIndex] ?? fallbackSources[0]
-  })()
-  console.log("CURRENT EP OBJ:", currentEpObj)
-console.log("EMBED ID:", currentEpObj?.anikotoEmbedId)
-console.log("PLAYER URL:", playerUrl)
+].filter(Boolean) as string[], [anilistId, currentEp, audioType, animeId])
+
+  const playerUrl = useMemo(() => {
+  if (!anikotoError && currentEpObj?.anikotoEmbedId) {
+    return `https://megaplay.buzz/stream/s-2/${currentEpObj.anikotoEmbedId}/${audioType}`
+  }
+  return fallbackSources[fallbackIndex] ?? fallbackSources[0]
+}, [anikotoError, currentEpObj?.anikotoEmbedId, audioType, fallbackSources, fallbackIndex])
+  
   useEffect(() => {
     const name =getUsername()
     if (name) setUsername(name)
@@ -295,8 +304,7 @@ console.log("PLAYER URL:", playerUrl)
          {next:{ revalidate:3600}}
       )
       const data = await res.json()
-      console.log("ANIME INFO:", data.data)
-      console.log("MAL ID:", data.data.mal_id)
+      
       setAnimeInfo(data.data)
       
       return data.data as AnimeInfo
@@ -316,9 +324,7 @@ console.log("PLAYER URL:", playerUrl)
       let timedEps: Array<{ number: number; title: string; releasedAt: number }> = []
       if (pageId) timedEps = await fetchAnikotoEpisodes(pageId)
       const siteEps = await fetchAnikotoSeries(animeId)
-    console.log("PAGE ID:", pageId)
-    console.log("SITE EPS:", siteEps)
-    console.log("FIRST SITE EP:", siteEps[0])
+    
       const totalEps = info.episodes || Math.max(timedEps.length, 12)
       const merged: Episode[] = Array.from({ length: totalEps }, (_, i) => {
   const n = i + 1
@@ -331,9 +337,7 @@ console.log("PLAYER URL:", playerUrl)
   audioType === 'dub'
   ?site?.embedDub
   :site?.embedSub
-  console.log("SITE:", site)
-  console.log("RAW EMBED:", rawEmbed)
-      console.log('episode', n, 'rawEmbed', rawEmbed)
+  
       const parts = rawEmbed?.split('/').filter(Boolean)
   return {
   id: `ep-${n}`,
@@ -451,6 +455,9 @@ setAnikotoError(!hasAnyEmbed)
         fetchEpisodes(info)
         saveWatchHistory(animeId)
         fetchRecommendations(info)
+        fetch(`/api/anilist?malId=${animeId}`)
+        .then(r => r.json())
+        .then(d => {if(d.anilistId)setAnilistId(d.anilistId) })
       }
     })
     fetchTop10(top10Tab)
@@ -546,21 +553,6 @@ setAnikotoError(!hasAnyEmbed)
     )
   }
 
-  const VideoPlayer = () => (
-    <div style={{ backgroundColor: '#000', borderRadius: '12px', overflow: 'hidden', position: 'relative', paddingTop: '56.25%', marginBottom: '10px' }}>
-      <iframe
-        key={playerUrl}
-        src={playerUrl}
-        onLoad={() =>{
-          console.log("iframe loaded")
-        }}
-        allowFullScreen
-        referrerPolicy="no-referrer"
-        style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 'none' }}
-        allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
-      />
-    </div>
-  )
 
   const NextEpisodeCountdown = () => {
     if (!nextUnreleased || !countdown) return null
@@ -851,54 +843,89 @@ setAnikotoError(!hasAnyEmbed)
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: COLORS.dark, color: COLORS.text, fontFamily: 'system-ui, sans-serif' }}>
-      <nav style={{ backgroundColor: COLORS.card, borderBottom: `1px solid ${COLORS.border}`, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '12px', position: 'sticky', top: 0, zIndex: 100 }}>
-        <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: COLORS.primary, cursor: 'pointer', fontSize: '18px', fontWeight: 600, flexShrink: 0 }}>← Back</button>
-        <span style={{ color: COLORS.muted, flexShrink: 0 }}>|</span>
-        <span style={{ fontWeight: 600, fontSize: isMobile ? '12px' : '14px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
-          {animeInfo?.title} — Episode {currentEp}
-        </span>
-        {/* Bell */}
-        <div style={{ position: 'relative', flexShrink: 0 }}>
-          <button onClick={() => { setShowWatchBell(p => !p); setShowWatchProfile(false) }} style={{ background: 'none', border: 'none', color: 'white', fontSize: '18px', cursor: 'pointer' }}>🔔</button>
-          {showWatchBell && (
-            <div style={{ position: 'absolute', top: '44px', right: 0, backgroundColor: COLORS.card, border: `1px solid ${COLORS.primary}`, borderRadius: '10px', width: '260px', zIndex: 200, overflow: 'hidden' }}>
-              <div style={{ display: 'flex', borderBottom: `1px solid ${COLORS.border}` }}>
-                {['Anime', 'Community'].map(tab => (
-                  <button key={tab} style={{ flex: 1, padding: '10px', border: 'none', backgroundColor: COLORS.dark, color: COLORS.primary, fontSize: '13px', cursor: 'pointer', fontWeight: 'bold' }}>{tab} 0</button>
-                ))}
-              </div>
-              <div style={{ padding: '20px', textAlign: 'center', color: '#666', fontSize: '13px' }}>No notifications</div>
+    <nav style={{ backgroundColor: COLORS.card, borderBottom: `1px solid ${COLORS.border}`, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '12px', position: 'sticky', top: 0, zIndex: 100 }}>
+  <button onClick={() => setMenuOpen(p => !p)} style={{ background: 'none', border: 'none', color: 'white', fontSize: '22px', cursor: 'pointer', flexShrink: 0 }}>☰</button>
+  <a href="/home" style={{ color: COLORS.primary, fontSize: '18px', fontWeight: 'bold', textDecoration: 'none', whiteSpace: 'nowrap', flexShrink: 0 }}>⚔️ AniStream</a>
+  <span style={{ color: COLORS.muted, flexShrink: 0 }}>|</span>
+  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1, overflow: 'hidden', fontSize: isMobile ? '11px' : '13px' }}>
+    <a href="/home" style={{ color: COLORS.muted, textDecoration: 'none', whiteSpace: 'nowrap' }}>Home</a>
+    <span style={{ color: COLORS.muted }}>/</span>
+    <a href={`/watch/${animeId}`} style={{ color: COLORS.muted, textDecoration: 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: isMobile ? '120px' : '300px' }}>{animeInfo?.title}</a>
+    <span style={{ color: COLORS.muted, flexShrink: 0 }}>/</span>
+    <span style={{ color: COLORS.pink, fontWeight: 700, flexShrink: 0 }}>Episode {currentEp}</span>
+  </div>
+  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
+    {/* Bell */}
+    <div style={{ position: 'relative' }}>
+      <button onClick={() => { setShowWatchBell(p => !p); setShowWatchProfile(false) }} style={{ background: 'none', border: 'none', color: 'white', fontSize: '18px', cursor: 'pointer' }}>🔔</button>
+      {showWatchBell && (
+        <div style={{ position: 'absolute', top: '44px', right: 0, backgroundColor: COLORS.card, border: `1px solid ${COLORS.primary}`, borderRadius: '10px', width: '260px', zIndex: 200, overflow: 'hidden' }}>
+          <div style={{ display: 'flex', borderBottom: `1px solid ${COLORS.border}` }}>
+            {['Anime', 'Community'].map(tab => (
+              <button key={tab} style={{ flex: 1, padding: '10px', border: 'none', backgroundColor: COLORS.dark, color: COLORS.primary, fontSize: '13px', cursor: 'pointer', fontWeight: 'bold' }}>{tab} 0</button>
+            ))}
+          </div>
+          <div style={{ padding: '20px', textAlign: 'center', color: '#666', fontSize: '13px' }}>No notifications</div>
+        </div>
+      )}
+    </div>
+    {/* Profile or Login */}
+    <div style={{ position: 'relative' }}>
+      {isWatchloggedIn ? (
+        <>
+          <button onClick={() => { setShowWatchProfile(p => !p); setShowWatchBell(false) }} style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: COLORS.primary, border: 'none', color: 'white', cursor: 'pointer', fontSize: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>👤</button>
+          {showWatchProfile && (
+            <div style={{ position: 'absolute', top: '44px', right: 0, backgroundColor: COLORS.card, border: `1px solid ${COLORS.primary}`, borderRadius: '10px', width: '180px', zIndex: 200, overflow: 'hidden' }}>
+              {[{ label: 'Profile', href: '/profile' }, { label: 'History', href: '/history' }, { label: 'Watchlist', href: '/watchlist' }, { label: 'Settings', href: '/settings' }, { label: 'Logout', href: '#' }].map(item => (
+                <a key={item.label} href={item.href}
+                  onClick={item.label === 'Logout' ? (e) => { e.preventDefault(); localStorage.removeItem('isLoggedIn'); localStorage.removeItem('username'); router.push('/login') } : undefined}
+                  style={{ display: 'block', padding: '10px 14px', color: item.label === 'Logout' ? '#ff4444' : 'white', textDecoration: 'none', fontSize: '13px', borderBottom: `1px solid ${COLORS.dark}` }}
+                  onMouseEnter={e => (e.currentTarget.style.backgroundColor = COLORS.dark)}
+                  onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+                >{item.label}</a>
+              ))}
             </div>
           )}
-        </div>
-        {/* Profile or Login */}
-        <div style={{ position: 'relative', flexShrink: 0 }}>
-          {isWatchloggedIn ? (
-            <>
-              <button onClick={() => { setShowWatchProfile(p => !p); setShowWatchBell(false) }} style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: COLORS.primary, border: 'none', color: 'white', cursor: 'pointer', fontSize: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>👤</button>
-              {showWatchProfile && (
-                <div style={{ position: 'absolute', top: '44px', right: 0, backgroundColor: COLORS.card, border: `1px solid ${COLORS.primary}`, borderRadius: '10px', width: '180px', zIndex: 200, overflow: 'hidden' }}>
-                  {[{ label: 'Profile', href: '/profile' }, { label: 'History', href: '/history' }, { label: 'Watchlist', href: '/watchlist' }, { label: 'Settings', href: '/settings' }, { label: 'Logout', href: '#' }].map(item => (
-                    <a key={item.label} href={item.href}
-                      onClick={item.label === 'Logout' ? (e) => { e.preventDefault(); localStorage.removeItem('isLoggedIn'); localStorage.removeItem('username'); router.push('/login') } : undefined}
-                      style={{ display: 'block', padding: '10px 14px', color: item.label === 'Logout' ? '#ff4444' : 'white', textDecoration: 'none', fontSize: '13px', borderBottom: `1px solid ${COLORS.dark}` }}
-                      onMouseEnter={e => (e.currentTarget.style.backgroundColor = COLORS.dark)}
-                      onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
-                    >{item.label}</a>
-                  ))}
-                </div>
-              )}
-            </>
-          ) : (
-            <a href="/login" style={{ backgroundColor: '#ff2475', color: 'white', textDecoration: 'none', padding: '7px 14px', borderRadius: '6px', fontWeight: 'bold', fontSize: '12px' }}>Login</a>
-          )}
-        </div>
-      </nav>
+        </>
+      ) : (
+        <a href="/login" style={{ backgroundColor: '#ff2475', color: 'white', textDecoration: 'none', padding: '7px 14px', borderRadius: '6px', fontWeight: 'bold', fontSize: '12px' }}>Login</a>
+      )}
+    </div>
+  </div>
+</nav>
 
+{menuOpen && (
+  <>
+    <div style={{ position: 'fixed', top: 0, left: 0, height: '100vh', width: '240px', backgroundColor: COLORS.dark, zIndex: 10000, borderRight: `2px solid ${COLORS.primary}`, display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', borderBottom: '1px solid #1a1a2e' }}>
+        <a href="/home" style={{ color: COLORS.primary, fontSize: '18px', fontWeight: 'bold', textDecoration: 'none' }}>⚔️ AniStream</a>
+        <button onClick={() => setMenuOpen(false)} style={{ background: 'none', border: 'none', color: 'white', fontSize: '22px', cursor: 'pointer' }}>✕</button>
+      </div>
+      {[
+        { label: 'HOME', href: '/home' },
+        { label: 'GENRE', href: '/search' },
+        { label: 'UPCOMING', href: '#' },
+        { label: 'ONGOING', href: '#' },
+        { label: 'COMPLETED', href: '#' },
+        { label: 'DUBBED', href: '#' },
+        { label: 'WATCH2GETHER', href: '/watch2gether' },
+        { label: 'ADVANCED SEARCH', href: '/search' },
+      ].map(item => (
+        <a key={item.label} href={item.href}
+          onClick={() => setMenuOpen(false)}
+          style={{ padding: '14px 20px', color: 'white', textDecoration: 'none', fontSize: '14px', fontWeight: 600, letterSpacing: '0.5px', borderBottom: '1px solid #1a1a2e', display: 'block' }}
+          onMouseEnter={e => { (e.currentTarget.style.backgroundColor = '#1a1a2e'); (e.currentTarget.style.color = COLORS.pink) }}
+          onMouseLeave={e => { (e.currentTarget.style.backgroundColor = 'transparent'); (e.currentTarget.style.color = 'white') }}
+        >{item.label}</a>
+      ))}
+    </div>
+    <div onClick={() => setMenuOpen(false)} style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 9999 }} />
+  </>
+)}
       {isMobile ? (
         // ── MOBILE LAYOUT ──────────────────────────────────────────────────────
         <div style={{ padding: '12px' }}>
-          <VideoPlayer />
+          <VideoPlayer playerUrl={playerUrl} />
           <ControlsBar mobile />
           <div style={{ textAlign: 'center', marginBottom: '14px' }}>
             <p style={{ color: COLORS.muted, fontSize: '13px', margin: '0 0 4px' }}>You are watching</p>
@@ -920,7 +947,7 @@ setAnikotoError(!hasAnyEmbed)
 
           {/* Center: Player + Controls + Comments */}
           <div>
-            <VideoPlayer />
+            <VideoPlayer playerUrl={playerUrl} />
             <ControlsBar />
             <ServerSelector />
             <NextEpisodeCountdown />

@@ -334,17 +334,7 @@ export const Navbar = ({
               <button onClick={() => setMenuOpen(false)} style={{ background: 'none', border: 'none', color: 'white', fontSize: '22px', cursor: 'pointer' }}>✕</button>
             </div>
 
-            <div style={{ padding: '12px 16px', borderBottom: '1px solid #1a1a2e' }}>
-              <div style={{ position: 'relative', display: 'flex' }}>
-                <input
-                  type="text" placeholder="Search anime..." value={search}
-                  onChange={e => handleSearchChange(e.target.value)}
-                  onKeyDown={e => { if (e.key === 'Enter') { onSearch?.(); setMenuOpen(false) } }}
-                  style={{ width: '100%', padding: '8px 12px', borderRadius: '20px 0 0 20px', border: `1px solid ${COLORS.primary}`, backgroundColor: CARD, color: 'white', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
-                />
-                <button onClick={() => { onSearch?.(); setMenuOpen(false) }} style={{ padding: '8px 12px', backgroundColor: COLORS.primary, border: 'none', borderRadius: '0 20px 20px 0', color: 'white', cursor: 'pointer', fontSize: '13px' }}>🔍</button>
-              </div>
-            </div>
+            
 
             {SIDEBAR_ITEMS.map(item => (
               <a key={item.label} href={item.href}
