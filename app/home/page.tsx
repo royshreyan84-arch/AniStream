@@ -6,6 +6,9 @@ import { RecentComment } from '@/app/lib/types'
 import { Navbar } from '../lib/Navbar'
 import  Footer  from '@/app/lib/components/Footer';
 import { supabase } from "../lib/supabaseClient"
+import CommunityAndSchedule from "../lib/CommunityAndSchedule"
+import ScrollToTop from "../lib/scrollToTop"
+
 
 const PINK = '#ff2475'
 const PURPLE = '#6c63ff'
@@ -344,29 +347,10 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Comments */}
-          <div style={{ marginBottom: '24px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-              <h3 style={{ fontSize: isMobile ? '16px' : '19px', margin: 0, fontWeight: 700, color: PINK, borderLeft: `3px solid ${PINK}`, paddingLeft: '10px' }}>Comments</h3>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ color: '#aaa', fontSize: '12px' }}>Hide</span>
-                <div onClick={() => setShowComments(p => !p)} style={{ width: '38px', height: '20px', borderRadius: '10px', backgroundColor: showComments ? PINK : '#333', cursor: 'pointer', position: 'relative', transition: 'background 0.2s' }}>
-                  <div style={{ position: 'absolute', top: '3px', left: showComments ? '20px' : '3px', width: '14px', height: '14px', borderRadius: '50%', backgroundColor: 'white', transition: 'left 0.2s' }} />
-                </div>
-              </div>
-            </div>
-            {showComments && (
-              <div style={{ backgroundColor: CARD, borderRadius: '10px', padding: '16px', border: `1px solid ${BORDER}` }}>
-                <div style={{ display: 'flex', gap: '16px', marginBottom: '12px', borderBottom: `1px solid ${BORDER}`, paddingBottom: '12px' }}>
-                  {['Newest Comments', 'Top Comments'].map(t => (
-                    <span key={t} style={{ fontSize: '13px', color: t === 'Newest Comments' ? PINK : '#aaa', fontWeight: t === 'Newest Comments' ? 'bold' : 'normal', cursor: 'pointer', borderBottom: t === 'Newest Comments' ? `2px solid ${PINK}` : 'none', paddingBottom: '4px' }}>{t}</span>
-                  ))}
-                </div>
-                <p style={{ color: '#aaa', fontSize: '13px', margin: 0, textAlign: 'center' }}>No comments yet. Be the first to comment!</p>
-              </div>
-            )}
-          </div>
-
+          {/*Airing Schedule*/}
+          <div style={{ marginBottom: '24px'}}>
+            <CommunityAndSchedule />
+           </div>
           {/* Mobile Top 10 — shown only under 768px via CSS class below */}
           <div className="home-top10-mobile" style={{ marginBottom: '24px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>

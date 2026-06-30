@@ -34,7 +34,7 @@ interface ScheduleItem {
 }
 
 export default function CommunityAndSchedule() {
-  const [activeTab, setActiveTab] = useState<'community' | 'schedule'>('community');
+  const [activeTab, setActiveTab] = useState<'community' | 'schedule'>('schedule');
   const [currentUser, setCurrentUser] = useState<string | null>(null);
 
   const [comments, setComments] = useState<Comment[]>([]);
@@ -209,30 +209,33 @@ export default function CommunityAndSchedule() {
   return (
     <div style={{ width: '100%', maxWidth: '900px', margin: '0 auto', padding: '16px', backgroundColor: CARD, color: 'white', borderRadius: '12px', border: `1px solid ${BORDER}` }}>
       {/* Tabs */}
-      <div style={{ display: 'flex', borderBottom: `1px solid ${BORDER}`, marginBottom: '20px' }}>
-        <button
-          onClick={() => setActiveTab('community')}
-          style={{
-            display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 20px',
-            fontWeight: 600, fontSize: '14px', background: 'none', cursor: 'pointer',
-            border: 'none', borderBottom: activeTab === 'community' ? `2px solid ${PURPLE}` : '2px solid transparent',
-            color: activeTab === 'community' ? PURPLE : MUTED,
-          }}
-        >
-          <Users size={18} /> Community
-        </button>
-        <button
-          onClick={() => setActiveTab('schedule')}
-          style={{
-            display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 20px',
-            fontWeight: 600, fontSize: '14px', background: 'none', cursor: 'pointer',
-            border: 'none', borderBottom: activeTab === 'schedule' ? `2px solid ${PURPLE}` : '2px solid transparent',
-            color: activeTab === 'schedule' ? PURPLE : MUTED,
-          }}
-        >
-          <Calendar size={18} /> Airing Schedule
-        </button>
-      </div>
+<div style={{ display: 'flex', borderBottom: `1px solid ${BORDER}`, marginBottom: '20px' }}>
+  {/* Schedule tab FIRST */}
+  <button
+    onClick={() => setActiveTab('schedule')}
+    style={{
+      display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 20px',
+      fontWeight: 600, fontSize: '14px', background: 'none', cursor: 'pointer',
+      border: 'none', borderBottom: activeTab === 'schedule' ? `2px solid ${PURPLE}` : '2px solid transparent',
+      color: activeTab === 'schedule' ? PURPLE : MUTED,
+    }}
+  >
+    <Calendar size={18} /> Airing Schedule
+  </button>
+
+  {/* Community tab SECOND */}
+  <button
+    onClick={() => setActiveTab('community')}
+    style={{
+      display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 20px',
+      fontWeight: 600, fontSize: '14px', background: 'none', cursor: 'pointer',
+      border: 'none', borderBottom: activeTab === 'community' ? `2px solid ${PURPLE}` : '2px solid transparent',
+      color: activeTab === 'community' ? PURPLE : MUTED,
+    }}
+  >
+    <Users size={18} /> Community
+  </button>
+</div>
 
       {/* COMMUNITY */}
       {activeTab === 'community' && (
