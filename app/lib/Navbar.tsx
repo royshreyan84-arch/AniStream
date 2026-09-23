@@ -81,22 +81,40 @@ export const Navbar = ({
 
   useEffect(() => {
     const query = search.trim()
-    if (!query) { setSearchResults([]); setIsDropdownOpen(false); return }
+    if (!query) {
+      setSearchResults([])
+      setIsDropdownOpen(false)
+      return
+    }
+
     const controller = new AbortController()
-    const fetchResults = async () => {
+    const timer = window.setTimeout(async () => {
       try {
-        const res = await fetch(`https://api.jikan.moe/v4/anime?q=${encodeURIComponent(query)}&limit=5`, { signal: controller.signal })
+        const res = await fetch(
+          `https://api.jikan.moe/v4/anime?q=${encodeURIComponent(query)}&limit=5`,
+          { signal: controller.signal }
+        )
+
+        if (!res.ok) throw new Error(`Jikan request failed: ${res.status}`)
+
         const data = await res.json()
         if (controller.signal.aborted) return
+
         const results = Array.isArray(data.data) ? data.data.slice(0, 5) : []
         setSearchResults(results)
         setIsDropdownOpen(results.length > 0)
       } catch (error: any) {
-        if (error.name !== 'AbortError') { setSearchResults([]); setIsDropdownOpen(false) }
+        if (error.name !== 'AbortError') {
+          setSearchResults([])
+          setIsDropdownOpen(false)
+        }
       }
+    }, 350)
+
+    return () => {
+      window.clearTimeout(timer)
+      controller.abort()
     }
-    fetchResults()
-    return () => controller.abort()
   }, [search])
 
   useEffect(() => {
